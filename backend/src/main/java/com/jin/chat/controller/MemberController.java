@@ -4,6 +4,7 @@ import com.jin.chat.common.api.ResultData;
 import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.common.exception.BusinessException;
 import com.jin.chat.common.exception.ErrorCodeEnum;
+import com.jin.chat.domain.vo.MemberCandidateVO;
 import com.jin.chat.domain.vo.MemberVO;
 import com.jin.chat.domain.vo.RoomVO;
 import com.jin.chat.service.MemberService;
@@ -53,6 +54,27 @@ public class MemberController {
         assertAdmin();
         memberService.approve(id, userId, Boolean.TRUE.equals(body.get("pass")));
         return ResultData.success();
+    }
+
+    @PostMapping("/{id}/members/{userId}/add")
+    public ResultData<Void> addMember(@PathVariable Long id, @PathVariable Long userId) {
+        assertAdmin();
+        memberService.addMember(id, userId);
+        return ResultData.success();
+    }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    public ResultData<Void> kickMember(@PathVariable Long id, @PathVariable Long userId) {
+        assertAdmin();
+        memberService.kickMember(id, userId);
+        return ResultData.success();
+    }
+
+    @GetMapping("/{id}/member-candidates")
+    public ResultData<List<MemberCandidateVO>> candidates(@PathVariable Long id,
+                                                          @RequestParam String keyword) {
+        assertAdmin();
+        return ResultData.success(memberService.searchCandidates(id, keyword));
     }
 
     @GetMapping("/mine")

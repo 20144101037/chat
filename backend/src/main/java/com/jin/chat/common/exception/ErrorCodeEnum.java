@@ -40,6 +40,8 @@ public enum ErrorCodeEnum {
     NOT_ROOM_MEMBER(3004, "您尚未加入该聊天室"),
     ALREADY_JOINED(3005, "您已加入该聊天室"),
     JOIN_PENDING(3006, "加入申请待管理员审批"),
+    CANNOT_KICK_OWNER(3007, "不能移除聊天室创建者"),
+    MEMBER_NOT_IN_ROOM(3008, "该用户不在聊天室成员列表中"),
 
     MESSAGE_NOT_EXIST(4000, "消息不存在"),
     MESSAGE_ALREADY_REVIEWED(4001, "消息已被审核，请勿重复操作"),

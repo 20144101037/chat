@@ -44,6 +44,9 @@ export const roomApi = {
   leave: (id) => request.post(`/rooms/${id}/leave`),
   approveMember: (id, userId, pass) => request.post(`/rooms/${id}/members/${userId}/approve`, { pass }),
   members: (id, status) => request.get(`/rooms/${id}/members`, { params: { status } }),
+  addMember: (roomId, userId) => request.post(`/rooms/${roomId}/members/${userId}/add`),
+  kickMember: (roomId, userId) => request.delete(`/rooms/${roomId}/members/${userId}`),
+  memberCandidates: (roomId, keyword) => request.get(`/rooms/${roomId}/member-candidates`, { params: { keyword } }),
   myRooms: () => request.get('/rooms/mine'),
 };
 

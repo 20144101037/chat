@@ -11,6 +11,7 @@ import com.jin.chat.domain.enums.JoinPolicyEnum;
 import com.jin.chat.domain.enums.MemberStatusEnum;
 import com.jin.chat.domain.enums.MessageTypeEnum;
 import com.jin.chat.domain.entity.UserDO;
+import com.jin.chat.domain.vo.MemberCandidateVO;
 import com.jin.chat.domain.vo.MemberVO;
 import com.jin.chat.domain.vo.RoomVO;
 import com.jin.chat.mapper.UserChatRoomMapper;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -174,6 +176,107 @@ public class MemberServiceImpl extends ServiceImpl<UserChatRoomMapper, UserChatR
             }
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void kickMember(Long roomId, Long userId) {
+        ChatRoomDO room = chatRoomService.getById(roomId);
+        if (room == null) {
+            throw new BusinessException(ErrorCodeEnum.ROOM_NOT_EXIST);
+        }
+        if (Objects.equals(room.getOwnerId(), userId)) {
+            throw new BusinessException(ErrorCodeEnum.CANNOT_KICK_OWNER);
+        }
+        UserChatRoomDO rel = getRelation(userId, roomId);
+        if (rel == null || (!MemberStatusEnum.JOINED.name().equals(rel.getMemberStatus())
+                && !MemberStatusEnum.PENDING.name().equals(rel.getMemberStatus()))) {
+            throw new BusinessException(ErrorCodeEnum.MEMBER_NOT_IN_ROOM);
+        }
+        rel.setMemberStatus(MemberStatusEnum.LEFT.name());
+        updateById(rel);
+
+        pushService.notifyUser(userId, WsMessage.builder()
+                .type(MessageTypeEnum.NOTIFICATION.name())
+                .roomId(roomId)
+                .content("您已被管理员移出聊天室「" + room.getName() + "」")
+                .timestamp(OffsetDateTime.now())
+                .build());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void addMember(Long roomId, Long userId) {
+        ChatRoomDO room = chatRoomService.getAvailableRoom(roomId);
+        Long joined = userChatRoomMapper.countJoinedMembers(roomId);
+        if (room.getMaxUsers() != null && joined >= room.getMaxUsers()) {
+            throw new BusinessException(ErrorCodeEnum.ROOM_FULL);
+        }
+        UserDO user = userMapper.selectById(userId);
+        if (user == null || !"ACTIVE".equals(user.getStatus())) {
+            throw new BusinessException(ErrorCodeEnum.ACCOUNT_NOT_EXIST);
+        }
+
+        UserChatRoomDO rel = getRelation(userId, roomId);
+        if (rel != null && MemberStatusEnum.JOINED.name().equals(rel.getMemberStatus())) {
+            throw new BusinessException(ErrorCodeEnum.ALREADY_JOINED);
+        }
+        if (rel == null) {
+            rel = new UserChatRoomDO();
+            rel.setUserId(userId);
+            rel.setRoomId(roomId);
+            rel.setRoleInRoom("MEMBER");
+            rel.setMemberStatus(MemberStatusEnum.JOINED.name());
+            rel.setJoinedAt(OffsetDateTime.now());
+            save(rel);
+        } else {
+            rel.setMemberStatus(MemberStatusEnum.JOINED.name());
+            rel.setJoinedAt(OffsetDateTime.now());
+            updateById(rel);
+        }
+
+        pushService.notifyUser(userId, WsMessage.builder()
+                .type(MessageTypeEnum.NOTIFICATION.name())
+                .roomId(roomId)
+                .content("您已被管理员加入聊天室「" + room.getName() + "」")
+                .timestamp(OffsetDateTime.now())
+                .build());
+    }
+
+    @Override
+    public List<MemberCandidateVO> searchCandidates(Long roomId, String keyword) {
+        ChatRoomDO room = chatRoomService.getById(roomId);
+        if (room == null) {
+            throw new BusinessException(ErrorCodeEnum.ROOM_NOT_EXIST);
+        }
+        if (!StringUtils.hasText(keyword)) {
+            return Collections.emptyList();
+        }
+        List<UserDO> users = userMapper.selectList(new LambdaQueryWrapper<UserDO>()
+                .eq(UserDO::getStatus, "ACTIVE")
+                .and(w -> w.like(UserDO::getUsername, keyword).or().like(UserDO::getNickname, keyword))
+                .last("limit 20"));
+        if (users.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> userIds = users.stream().map(UserDO::getId).collect(Collectors.toList());
+        List<Long> excluded = list(new LambdaQueryWrapper<UserChatRoomDO>()
+                .eq(UserChatRoomDO::getRoomId, roomId)
+                .in(UserChatRoomDO::getUserId, userIds)
+                .in(UserChatRoomDO::getMemberStatus,
+                        MemberStatusEnum.JOINED.name(), MemberStatusEnum.PENDING.name()))
+                .stream().map(UserChatRoomDO::getUserId).collect(Collectors.toList());
+
+        return users.stream()
+                .filter(u -> !excluded.contains(u.getId()))
+                .map(u -> {
+                    MemberCandidateVO vo = new MemberCandidateVO();
+                    vo.setUserId(u.getId());
+                    vo.setUsername(u.getUsername());
+                    vo.setNickname(u.getNickname());
+                    return vo;
+                })
+                .collect(Collectors.toList());
     }
 
     private UserChatRoomDO getRelation(Long userId, Long roomId) {

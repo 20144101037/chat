@@ -1,11 +1,10 @@
 package com.jin.chat.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jin.chat.common.cache.PermissionCache;
-import com.jin.chat.common.context.LoginUser;
 import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.common.exception.BusinessException;
-import com.jin.chat.domain.ao.RoleAO;
 import com.jin.chat.domain.entity.RoleDO;
 import com.jin.chat.domain.entity.UserDO;
 import com.jin.chat.domain.entity.UserRoleDO;
@@ -73,15 +72,15 @@ class UserAdminServiceTest {
         user.setRole("USER");
         when(userMapper.selectById(10L)).thenReturn(user);
 
-        RoleDO userRole = role("USER", 1L);
-        RoleDO adminRole = role("ROOM_ADMIN", 2L);
-        when(roleMapper.selectList(null)).thenReturn(List.of(userRole, adminRole));
+        RoleDO userRole = buildRole("USER", 1L);
+        RoleDO adminRole = buildRole("ROOM_ADMIN", 2L);
+        when(roleMapper.selectList(any())).thenReturn(List.of(userRole, adminRole));
 
         userAdminService.assignRoles(10L, List.of(1L, 2L));
 
-        verify(userRoleMapper).delete(any(LambdaQueryWrapper.class));
+        verify(userRoleMapper).delete(any(Wrapper.class));
         verify(userRoleMapper, times(2)).insert(any(UserRoleDO.class));
-        verify(userMapper).updateById(argThat(u -> UserRoleEnum.ROOM_ADMIN.name().equals(u.getRole())));
+        verify(userMapper).updateById(argThat((UserDO u) -> UserRoleEnum.ROOM_ADMIN.name().equals(u.getRole())));
         verify(permissionCache).evictUser(10L);
     }
 
@@ -90,11 +89,11 @@ class UserAdminServiceTest {
         UserDO user = new UserDO();
         user.setId(11L);
         when(userMapper.selectById(11L)).thenReturn(user);
-        when(roleMapper.selectList(null)).thenReturn(List.of());
+        when(roleMapper.selectList(any())).thenReturn(List.of());
 
         userAdminService.assignRoles(11L, List.of());
 
-        verify(userMapper).updateById(argThat(u -> UserRoleEnum.USER.name().equals(u.getRole())));
+        verify(userMapper).updateById(argThat((UserDO u) -> UserRoleEnum.USER.name().equals(u.getRole())));
     }
 
     @Test
@@ -136,7 +135,7 @@ class UserAdminServiceTest {
     void listRoleIds_shouldReturnIds() {
         UserRoleDO ur = new UserRoleDO();
         ur.setRoleId(3L);
-        when(userRoleMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(ur));
+        when(userRoleMapper.selectList(any(Wrapper.class))).thenReturn(List.of(ur));
         assertEquals(List.of(3L), userAdminService.listRoleIds(1L));
     }
 
@@ -149,19 +148,18 @@ class UserAdminServiceTest {
         user.setRole("USER");
         user.setStatus("ACTIVE");
 
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<UserDO> mpPage =
-                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10, 1);
+        Page<UserDO> mpPage = new Page<>(1, 10, 1);
         mpPage.setRecords(List.of(user));
-        when(userMapper.selectPage(any(), any(LambdaQueryWrapper.class))).thenReturn(mpPage);
+        when(userMapper.selectPage(any(Page.class), any(Wrapper.class))).thenReturn(mpPage);
 
         UserRoleDO ur = new UserRoleDO();
         ur.setUserId(1L);
         ur.setRoleId(1L);
-        when(userRoleMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(ur));
+        when(userRoleMapper.selectList(any(Wrapper.class))).thenReturn(List.of(ur));
 
-        RoleDO role = role("USER", 1L);
-        role.setRoleName("普通用户");
-        when(roleMapper.selectList(null)).thenReturn(List.of(role));
+        RoleDO roleDO = buildRole("USER", 1L);
+        roleDO.setRoleName("普通用户");
+        when(roleMapper.selectList(any())).thenReturn(List.of(roleDO));
 
         UserQuery query = new UserQuery();
         query.setPageNo(1);
@@ -169,11 +167,11 @@ class UserAdminServiceTest {
         assertEquals(1, userAdminService.page(query).getTotal());
     }
 
-    private static RoleDO role(String code, Long id) {
-        RoleDO role = new RoleDO();
-        role.setId(id);
-        role.setRoleCode(code);
-        role.setRoleName(code);
-        return role;
+    private static RoleDO buildRole(String code, Long id) {
+        RoleDO roleDO = new RoleDO();
+        roleDO.setId(id);
+        roleDO.setRoleCode(code);
+        roleDO.setRoleName(code);
+        return roleDO;
     }
 }

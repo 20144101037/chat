@@ -110,14 +110,6 @@ mvn verify        # 运行测试并校验覆盖率阈值
 
 测试报告：`backend/target/site/jacoco/index.html`
 
-前端工具函数测试（Vitest）：
-
-```bash
-cd frontend
-npm install
-npm run test
-```
-
 ## AI 辅助说明
 
 本项目的方案设计、代码骨架、文档在 AI 辅助下生成，关键架构决策与业务规则经人工核对确认。

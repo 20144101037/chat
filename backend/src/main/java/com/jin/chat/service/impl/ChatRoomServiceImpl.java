@@ -71,6 +71,10 @@ public class ChatRoomServiceImpl extends ServiceImpl<ChatRoomMapper, ChatRoomDO>
         if (StringUtils.hasText(ao.getJoinPolicy())) {
             room.setJoinPolicy(ao.getJoinPolicy());
         }
+        if (StringUtils.hasText(ao.getStatus())) {
+            RoomStatusEnum.valueOf(ao.getStatus());
+            room.setStatus(ao.getStatus());
+        }
         updateById(room);
         return toVO(room);
     }

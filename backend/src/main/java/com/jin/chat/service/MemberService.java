@@ -2,6 +2,7 @@ package com.jin.chat.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.jin.chat.domain.entity.UserChatRoomDO;
+import com.jin.chat.domain.vo.MemberCandidateVO;
 import com.jin.chat.domain.vo.MemberVO;
 import com.jin.chat.domain.vo.RoomVO;
 
@@ -55,4 +56,19 @@ public interface MemberService extends IService<UserChatRoomDO> {
      * @param status 成员状态过滤，为空则查询 JOINED 与 PENDING
      */
     List<MemberVO> listMembers(Long roomId, String status);
+
+    /**
+     * 管理员将用户移出聊天室（设为 LEFT）。
+     */
+    void kickMember(Long roomId, Long userId);
+
+    /**
+     * 管理员直接将用户拉入聊天室（设为 JOINED，绕过审批）。
+     */
+    void addMember(Long roomId, Long userId);
+
+    /**
+     * 搜索可拉入聊天室的用户（排除已在房间内或待审批的用户）。
+     */
+    List<MemberCandidateVO> searchCandidates(Long roomId, String keyword);
 }

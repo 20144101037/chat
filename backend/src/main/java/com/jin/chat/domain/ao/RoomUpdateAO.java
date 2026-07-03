@@ -27,4 +27,8 @@ public class RoomUpdateAO {
     /** OPEN / APPROVAL */
     @Pattern(regexp = "OPEN|APPROVAL", message = "加入策略仅支持 OPEN 或 APPROVAL")
     private String joinPolicy;
+
+    /** ACTIVE / PAUSED / CLOSED */
+    @Pattern(regexp = "ACTIVE|PAUSED|CLOSED", message = "状态仅支持 ACTIVE、PAUSED 或 CLOSED")
+    private String status;
 }

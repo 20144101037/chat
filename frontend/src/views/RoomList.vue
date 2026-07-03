@@ -37,27 +37,15 @@
       </el-table-column>
       <el-table-column label="操作" min-width="360">
         <template #default="{ row }">
-          <!-- 成员相关 -->
           <el-button v-if="row.myMemberStatus === 'JOINED'" type="primary" link @click="enter(row)">进入</el-button>
           <el-button v-if="row.myMemberStatus === 'JOINED'" type="warning" link @click="leave(row)">退出</el-button>
           <el-button v-else-if="row.myMemberStatus === 'PENDING'" type="info" link disabled>待审批</el-button>
           <el-button v-else type="success" link @click="join(row)">加入</el-button>
 
-          <!-- 管理员操作 -->
           <template v-if="auth.isAdmin">
             <el-divider direction="vertical" />
             <el-button type="primary" link @click="openEdit(row)">修改</el-button>
-            <el-dropdown trigger="click" @command="(cmd) => changeStatus(row, cmd)" style="margin:0 8px">
-              <el-button type="warning" link>状态 ▾</el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="ACTIVE" :disabled="row.status === 'ACTIVE'">设为活跃</el-dropdown-item>
-                  <el-dropdown-item command="PAUSED" :disabled="row.status === 'PAUSED'">设为暂停</el-dropdown-item>
-                  <el-dropdown-item command="CLOSED" :disabled="row.status === 'CLOSED'">关闭</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-button v-if="row.joinPolicy === 'APPROVAL'" type="success" link @click="openMembers(row)">审批</el-button>
+            <el-button type="primary" link :icon="User" @click="openMemberManage(row)">人员管理</el-button>
             <el-button type="info" link @click="openNotify(row)">通知</el-button>
             <el-button type="danger" link @click="remove(row)">删除</el-button>
           </template>
@@ -88,6 +76,13 @@
             <el-option label="需审批" value="APPROVAL" />
           </el-select>
         </el-form-item>
+        <el-form-item v-if="editingId" label="聊天室状态">
+          <el-select v-model="form.status">
+            <el-option label="活跃" value="ACTIVE" />
+            <el-option label="暂停" value="PAUSED" />
+            <el-option label="关闭" value="CLOSED" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialog = false">取消</el-button>
@@ -95,32 +90,70 @@
       </template>
     </el-dialog>
 
-    <!-- 成员审批 弹框 -->
-    <el-dialog v-model="memberDialog" :title="`成员审批 - ${currentRoom?.name || ''}`" width="560px">
-      <el-table :data="members" v-loading="memberLoading" empty-text="暂无待审批申请">
-        <el-table-column label="用户" min-width="140">
-          <template #default="{ row }">{{ row.nickname || row.username }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.memberStatus === 'JOINED' ? 'success' : 'warning'">
-              {{ row.memberStatus === 'JOINED' ? '已加入' : '待审批' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180">
-          <template #default="{ row }">
-            <template v-if="row.memberStatus === 'PENDING'">
-              <el-button type="success" link @click="approve(row, true)">通过</el-button>
-              <el-button type="danger" link @click="approve(row, false)">拒绝</el-button>
+    <!-- 人员管理 弹框 -->
+    <el-dialog v-model="manageDialog" :title="`人员管理 - ${currentRoom?.name || ''}`" width="640px">
+      <div class="manage-section">
+        <div class="section-title">拉人进群</div>
+        <div class="add-row">
+          <el-select
+            v-model="selectedUserId"
+            filterable
+            remote
+            clearable
+            placeholder="搜索用户名或昵称"
+            :remote-method="searchCandidates"
+            :loading="candidateLoading"
+            style="flex:1"
+          >
+            <el-option
+              v-for="u in candidates"
+              :key="u.userId"
+              :label="`${u.nickname || u.username} (${u.username})`"
+              :value="u.userId"
+            />
+          </el-select>
+          <el-button type="primary" :icon="Plus" :disabled="!selectedUserId" @click="addMember">拉入</el-button>
+        </div>
+      </div>
+
+      <div class="manage-section">
+        <div class="section-title">当前成员</div>
+        <el-table :data="members" v-loading="memberLoading" empty-text="暂无成员" size="small">
+          <el-table-column label="用户" min-width="140">
+            <template #default="{ row }">{{ row.nickname || row.username }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="memberStatusTag(row.memberStatus)" size="small">
+                {{ memberStatusText(row.memberStatus) }}
+              </el-tag>
             </template>
-            <span v-else style="color:#909399">-</span>
-          </template>
-        </el-table-column>
-      </el-table>
+          </el-table-column>
+          <el-table-column label="加入时间" width="160">
+            <template #default="{ row }">{{ row.joinedAt ? formatTime(row.joinedAt) : '-' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="160">
+            <template #default="{ row }">
+              <template v-if="row.memberStatus === 'PENDING'">
+                <el-button type="success" link size="small" @click="approve(row, true)">通过</el-button>
+                <el-button type="danger" link size="small" @click="approve(row, false)">拒绝</el-button>
+              </template>
+              <el-button
+                v-else-if="row.memberStatus === 'JOINED' && row.userId !== currentRoom?.ownerId"
+                type="danger"
+                link
+                size="small"
+                @click="kickMember(row)"
+              >移出</el-button>
+              <span v-else-if="row.memberStatus === 'JOINED'" class="muted-tip">创建者</span>
+              <span v-else class="muted-tip">-</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
 
-    <!-- 系统通知 弹框（绕过审核） -->
+    <!-- 系统通知 弹框 -->
     <el-dialog v-model="notifyDialog" :title="`发送系统通知 - ${currentRoom?.name || ''}`" width="440px">
       <el-input v-model="notifyContent" type="textarea" :rows="3" placeholder="该通知将绕过审核，直接推送到聊天室" />
       <template #footer>
@@ -135,7 +168,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Search, Plus } from '@element-plus/icons-vue';
+import { Search, Plus, User } from '@element-plus/icons-vue';
 import { roomApi } from '../api';
 import { useAuthStore } from '../stores/auth';
 import PageHeader from '../components/PageHeader.vue';
@@ -148,12 +181,15 @@ const page = reactive({ records: [], total: 0 });
 
 const dialog = ref(false);
 const editingId = ref(null);
-const form = reactive({ name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN' });
+const form = reactive({ name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN', status: 'ACTIVE' });
 
-const memberDialog = ref(false);
+const manageDialog = ref(false);
 const memberLoading = ref(false);
 const members = ref([]);
 const currentRoom = ref(null);
+const candidates = ref([]);
+const candidateLoading = ref(false);
+const selectedUserId = ref(null);
 
 const notifyDialog = ref(false);
 const notifyContent = ref('');
@@ -163,6 +199,16 @@ function statusText(s) {
 }
 function statusTag(s) {
   return { ACTIVE: 'success', PAUSED: 'warning', CLOSED: 'info' }[s] || '';
+}
+function memberStatusText(s) {
+  return { JOINED: '已加入', PENDING: '待审批', LEFT: '已离开', REJECTED: '已拒绝' }[s] || s;
+}
+function memberStatusTag(s) {
+  return { JOINED: 'success', PENDING: 'warning', LEFT: 'info', REJECTED: 'danger' }[s] || '';
+}
+function formatTime(t) {
+  if (!t) return '-';
+  return String(t).replace('T', ' ').slice(0, 19);
 }
 
 async function load() {
@@ -181,7 +227,6 @@ function onPageChange(p) {
   load();
 }
 
-// —— 加入 / 退出 ——
 async function join(row) {
   const res = await roomApi.join(row.id);
   ElMessage.success(res.memberStatus === 'JOINED' ? '加入成功' : '已提交申请，等待审批');
@@ -199,10 +244,9 @@ function enter(row) {
   router.push(`/app/rooms/${row.id}`);
 }
 
-// —— 创建 / 修改 ——
 function openCreate() {
   editingId.value = null;
-  Object.assign(form, { name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN' });
+  Object.assign(form, { name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN', status: 'ACTIVE' });
   dialog.value = true;
 }
 
@@ -213,6 +257,7 @@ function openEdit(row) {
     description: row.description || '',
     maxUsers: row.maxUsers,
     joinPolicy: row.joinPolicy,
+    status: row.status,
   });
   dialog.value = true;
 }
@@ -226,17 +271,11 @@ async function submitForm() {
     await roomApi.update(editingId.value, { ...form });
     ElMessage.success('修改成功');
   } else {
-    await roomApi.create({ ...form });
+    const { status, ...createData } = form;
+    await roomApi.create(createData);
     ElMessage.success('创建成功');
   }
   dialog.value = false;
-  load();
-}
-
-// —— 状态 / 删除 ——
-async function changeStatus(row, status) {
-  await roomApi.changeStatus(row.id, status);
-  ElMessage.success('状态已更新');
   load();
 }
 
@@ -247,10 +286,11 @@ async function remove(row) {
   load();
 }
 
-// —— 成员审批 ——
-async function openMembers(row) {
+async function openMemberManage(row) {
   currentRoom.value = row;
-  memberDialog.value = true;
+  selectedUserId.value = null;
+  candidates.value = [];
+  manageDialog.value = true;
   await loadMembers();
 }
 
@@ -263,14 +303,45 @@ async function loadMembers() {
   }
 }
 
-async function approve(row, pass) {
-  await roomApi.approveMember(currentRoom.value.id, row.userId, pass);
-  ElMessage.success(pass ? '已通过' : '已拒绝');
-  loadMembers();
+async function searchCandidates(keyword) {
+  if (!keyword?.trim()) {
+    candidates.value = [];
+    return;
+  }
+  candidateLoading.value = true;
+  try {
+    candidates.value = await roomApi.memberCandidates(currentRoom.value.id, keyword.trim());
+  } finally {
+    candidateLoading.value = false;
+  }
+}
+
+async function addMember() {
+  if (!selectedUserId.value) return;
+  await roomApi.addMember(currentRoom.value.id, selectedUserId.value);
+  ElMessage.success('已拉入聊天室');
+  selectedUserId.value = null;
+  candidates.value = [];
+  await loadMembers();
   load();
 }
 
-// —— 系统通知 ——
+async function kickMember(row) {
+  const name = row.nickname || row.username;
+  await ElMessageBox.confirm(`确定将「${name}」移出聊天室吗？`, '移出确认', { type: 'warning' });
+  await roomApi.kickMember(currentRoom.value.id, row.userId);
+  ElMessage.success('已移出');
+  await loadMembers();
+  load();
+}
+
+async function approve(row, pass) {
+  await roomApi.approveMember(currentRoom.value.id, row.userId, pass);
+  ElMessage.success(pass ? '已通过' : '已拒绝');
+  await loadMembers();
+  load();
+}
+
 function openNotify(row) {
   currentRoom.value = row;
   notifyContent.value = '';
@@ -294,4 +365,9 @@ onMounted(load);
 .room-cell { display: flex; align-items: center; gap: 10px; }
 .room-av { background: var(--brand-gradient); color: #fff; font-weight: 600; flex-shrink: 0; }
 .room-nm { font-weight: 600; }
+.manage-section { margin-bottom: 20px; }
+.manage-section:last-child { margin-bottom: 0; }
+.section-title { font-weight: 600; margin-bottom: 10px; color: var(--text-main); }
+.add-row { display: flex; gap: 10px; align-items: center; }
+.muted-tip { color: var(--text-secondary); font-size: 12px; }
 </style>
