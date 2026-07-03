@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jin.chat.mapper.MessageMapper">
+
+    <!-- CAS 更新审核状态：仅当当前仍为 PENDING_REVIEW 时才更新，保证并发只生效一次 -->
+    <update id="updateStatusCas">
+        UPDATE messages
+        SET status = #{targetStatus},
+            reviewer_id = #{reviewerId},
+            reviewed_at = #{reviewedAt},
+            version = version + 1,
+            updated_at = now()
+        WHERE id = #{id}
+          AND status = 'PENDING_REVIEW'
+    </update>
+
+    <select id="listApprovedByRoom" resultType="com.jin.chat.domain.entity.MessageDO">
+        SELECT *
+        FROM messages
+        WHERE room_id = #{roomId}
+          AND status = 'APPROVED'
+          AND deleted = FALSE
+        <if test="beforeId != null">
+          AND id &lt; #{beforeId}
+        </if>
+        ORDER BY submitted_at DESC, id DESC
+        LIMIT #{size}
+    </select>
+
+</mapper>

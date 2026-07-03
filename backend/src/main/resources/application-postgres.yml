@@ -1,0 +1,18 @@
+# PostgreSQL 数据源配置（切换到 PostgreSQL 时使用：将 application.yml 的 spring.profiles.active 改为 postgres）
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/chat?stringtype=unspecified
+    username: chat
+    password: chat123
+    hikari:
+      pool-name: ChatHikariCP
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      validation-timeout: 5000
+      # 连接泄漏检测（毫秒），便于定位未关闭连接
+      leak-detection-threshold: 20000
+      connection-test-query: SELECT 1

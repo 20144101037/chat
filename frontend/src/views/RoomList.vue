@@ -1,0 +1,282 @@
+<template>
+  <div>
+    <div class="toolbar">
+      <el-input v-model="query.keyword" placeholder="搜索聊天室名称" style="width:220px" clearable @keyup.enter="load" />
+      <el-select v-model="query.status" placeholder="状态" clearable style="width:140px" @change="load">
+        <el-option label="活跃" value="ACTIVE" />
+        <el-option label="暂停" value="PAUSED" />
+        <el-option label="关闭" value="CLOSED" />
+      </el-select>
+      <el-button type="primary" @click="load">查询</el-button>
+      <el-button v-if="auth.isAdmin" type="success" @click="openCreate">创建聊天室</el-button>
+    </div>
+
+    <el-table :data="page.records" style="width:100%" v-loading="loading">
+      <el-table-column prop="name" label="名称" min-width="120" />
+      <el-table-column prop="description" label="描述" min-width="140" show-overflow-tooltip />
+      <el-table-column label="状态" width="90">
+        <template #default="{ row }">
+          <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="加入策略" width="100">
+        <template #default="{ row }">{{ row.joinPolicy === 'OPEN' ? '开放' : '需审批' }}</template>
+      </el-table-column>
+      <el-table-column label="成员" width="100">
+        <template #default="{ row }">{{ row.memberCount }}/{{ row.maxUsers }}</template>
+      </el-table-column>
+      <el-table-column label="操作" min-width="360">
+        <template #default="{ row }">
+          <!-- 成员相关 -->
+          <el-button v-if="row.myMemberStatus === 'JOINED'" type="primary" link @click="enter(row)">进入</el-button>
+          <el-button v-if="row.myMemberStatus === 'JOINED'" type="warning" link @click="leave(row)">退出</el-button>
+          <el-button v-else-if="row.myMemberStatus === 'PENDING'" type="info" link disabled>待审批</el-button>
+          <el-button v-else type="success" link @click="join(row)">加入</el-button>
+
+          <!-- 管理员操作 -->
+          <template v-if="auth.isAdmin">
+            <el-divider direction="vertical" />
+            <el-button type="primary" link @click="openEdit(row)">修改</el-button>
+            <el-dropdown trigger="click" @command="(cmd) => changeStatus(row, cmd)" style="margin:0 8px">
+              <el-button type="warning" link>状态 ▾</el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="ACTIVE" :disabled="row.status === 'ACTIVE'">设为活跃</el-dropdown-item>
+                  <el-dropdown-item command="PAUSED" :disabled="row.status === 'PAUSED'">设为暂停</el-dropdown-item>
+                  <el-dropdown-item command="CLOSED" :disabled="row.status === 'CLOSED'">关闭</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button v-if="row.joinPolicy === 'APPROVAL'" type="success" link @click="openMembers(row)">审批</el-button>
+            <el-button type="info" link @click="openNotify(row)">通知</el-button>
+            <el-button type="danger" link @click="remove(row)">删除</el-button>
+          </template>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-pagination
+      v-if="page.total > query.pageSize"
+      style="margin-top:16px;justify-content:flex-end"
+      layout="prev, pager, next, total"
+      :total="page.total"
+      :page-size="query.pageSize"
+      :current-page="query.pageNo"
+      @current-change="onPageChange"
+    />
+
+    <!-- 创建/修改 弹框 -->
+    <el-dialog v-model="dialog" :title="editingId ? '修改聊天室' : '创建聊天室'" width="440px">
+      <el-form :model="form" label-width="90px">
+        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="描述"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="最大人数"><el-input-number v-model="form.maxUsers" :min="1" /></el-form-item>
+        <el-form-item label="加入策略">
+          <el-select v-model="form.joinPolicy">
+            <el-option label="开放（申请即加入）" value="OPEN" />
+            <el-option label="需审批" value="APPROVAL" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialog = false">取消</el-button>
+        <el-button type="primary" @click="submitForm">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 成员审批 弹框 -->
+    <el-dialog v-model="memberDialog" :title="`成员审批 - ${currentRoom?.name || ''}`" width="560px">
+      <el-table :data="members" v-loading="memberLoading" empty-text="暂无待审批申请">
+        <el-table-column label="用户" min-width="140">
+          <template #default="{ row }">{{ row.nickname || row.username }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.memberStatus === 'JOINED' ? 'success' : 'warning'">
+              {{ row.memberStatus === 'JOINED' ? '已加入' : '待审批' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180">
+          <template #default="{ row }">
+            <template v-if="row.memberStatus === 'PENDING'">
+              <el-button type="success" link @click="approve(row, true)">通过</el-button>
+              <el-button type="danger" link @click="approve(row, false)">拒绝</el-button>
+            </template>
+            <span v-else style="color:#909399">-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <!-- 系统通知 弹框（绕过审核） -->
+    <el-dialog v-model="notifyDialog" :title="`发送系统通知 - ${currentRoom?.name || ''}`" width="440px">
+      <el-input v-model="notifyContent" type="textarea" :rows="3" placeholder="该通知将绕过审核，直接推送到聊天室" />
+      <template #footer>
+        <el-button @click="notifyDialog = false">取消</el-button>
+        <el-button type="primary" @click="sendNotify">发送</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { roomApi } from '../api';
+import { useAuthStore } from '../stores/auth';
+
+const router = useRouter();
+const auth = useAuthStore();
+const loading = ref(false);
+const query = reactive({ keyword: '', status: '', pageNo: 1, pageSize: 10 });
+const page = reactive({ records: [], total: 0 });
+
+const dialog = ref(false);
+const editingId = ref(null);
+const form = reactive({ name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN' });
+
+const memberDialog = ref(false);
+const memberLoading = ref(false);
+const members = ref([]);
+const currentRoom = ref(null);
+
+const notifyDialog = ref(false);
+const notifyContent = ref('');
+
+function statusText(s) {
+  return { ACTIVE: '活跃', PAUSED: '暂停', CLOSED: '关闭' }[s] || s;
+}
+function statusTag(s) {
+  return { ACTIVE: 'success', PAUSED: 'warning', CLOSED: 'info' }[s] || '';
+}
+
+async function load() {
+  loading.value = true;
+  try {
+    const res = await roomApi.page(query);
+    page.records = res.records;
+    page.total = res.total;
+  } finally {
+    loading.value = false;
+  }
+}
+
+function onPageChange(p) {
+  query.pageNo = p;
+  load();
+}
+
+// —— 加入 / 退出 ——
+async function join(row) {
+  const res = await roomApi.join(row.id);
+  ElMessage.success(res.memberStatus === 'JOINED' ? '加入成功' : '已提交申请，等待审批');
+  load();
+}
+
+async function leave(row) {
+  await ElMessageBox.confirm(`确定退出「${row.name}」吗？`, '提示', { type: 'warning' });
+  await roomApi.leave(row.id);
+  ElMessage.success('已退出');
+  load();
+}
+
+function enter(row) {
+  router.push(`/app/rooms/${row.id}`);
+}
+
+// —— 创建 / 修改 ——
+function openCreate() {
+  editingId.value = null;
+  Object.assign(form, { name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN' });
+  dialog.value = true;
+}
+
+function openEdit(row) {
+  editingId.value = row.id;
+  Object.assign(form, {
+    name: row.name,
+    description: row.description || '',
+    maxUsers: row.maxUsers,
+    joinPolicy: row.joinPolicy,
+  });
+  dialog.value = true;
+}
+
+async function submitForm() {
+  if (!form.name?.trim()) {
+    ElMessage.warning('请输入聊天室名称');
+    return;
+  }
+  if (editingId.value) {
+    await roomApi.update(editingId.value, { ...form });
+    ElMessage.success('修改成功');
+  } else {
+    await roomApi.create({ ...form });
+    ElMessage.success('创建成功');
+  }
+  dialog.value = false;
+  load();
+}
+
+// —— 状态 / 删除 ——
+async function changeStatus(row, status) {
+  await roomApi.changeStatus(row.id, status);
+  ElMessage.success('状态已更新');
+  load();
+}
+
+async function remove(row) {
+  await ElMessageBox.confirm(`确定删除聊天室「${row.name}」吗？此操作不可恢复。`, '删除确认', { type: 'warning' });
+  await roomApi.remove(row.id);
+  ElMessage.success('删除成功');
+  load();
+}
+
+// —— 成员审批 ——
+async function openMembers(row) {
+  currentRoom.value = row;
+  memberDialog.value = true;
+  await loadMembers();
+}
+
+async function loadMembers() {
+  memberLoading.value = true;
+  try {
+    members.value = await roomApi.members(currentRoom.value.id);
+  } finally {
+    memberLoading.value = false;
+  }
+}
+
+async function approve(row, pass) {
+  await roomApi.approveMember(currentRoom.value.id, row.userId, pass);
+  ElMessage.success(pass ? '已通过' : '已拒绝');
+  loadMembers();
+  load();
+}
+
+// —— 系统通知 ——
+function openNotify(row) {
+  currentRoom.value = row;
+  notifyContent.value = '';
+  notifyDialog.value = true;
+}
+
+async function sendNotify() {
+  if (!notifyContent.value.trim()) {
+    ElMessage.warning('请输入通知内容');
+    return;
+  }
+  await roomApi.systemNotify(currentRoom.value.id, notifyContent.value);
+  ElMessage.success('已发送');
+  notifyDialog.value = false;
+}
+
+onMounted(load);
+</script>
+
+<style scoped>
+.toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+</style>

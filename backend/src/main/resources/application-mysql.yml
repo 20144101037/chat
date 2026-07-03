@@ -1,0 +1,19 @@
+# MySQL 本地测试数据源配置
+# 需本地已安装 MySQL；createDatabaseIfNotExist=true 会自动创建 chat 库
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/chat?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8&useUnicode=true
+    username: root
+    password: root
+    hikari:
+      pool-name: ChatHikariCP
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      validation-timeout: 5000
+      # 连接泄漏检测（毫秒），便于定位未关闭连接
+      leak-detection-threshold: 20000
+      connection-test-query: SELECT 1
