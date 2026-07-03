@@ -4,10 +4,13 @@ import com.jin.chat.common.exception.BusinessException;
 import com.jin.chat.common.util.JwtUtil;
 import com.jin.chat.domain.ao.LoginAO;
 import com.jin.chat.domain.ao.RegisterAO;
+import com.jin.chat.domain.entity.RoleDO;
 import com.jin.chat.domain.entity.UserDO;
 import com.jin.chat.domain.vo.LoginVO;
 import com.jin.chat.domain.vo.UserVO;
+import com.jin.chat.mapper.RoleMapper;
 import com.jin.chat.mapper.UserMapper;
+import com.jin.chat.mapper.UserRoleMapper;
 import com.jin.chat.service.impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,12 @@ class AuthServiceTest {
     @Mock
     private UserMapper userMapper;
 
+    @Mock
+    private RoleMapper roleMapper;
+
+    @Mock
+    private UserRoleMapper userRoleMapper;
+
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Mock
@@ -54,7 +63,16 @@ class AuthServiceTest {
     @Test
     void register_shouldSucceed_whenUsernameNotExist() {
         when(userMapper.selectByUsername("alice")).thenReturn(null);
-        when(userMapper.insert(any(UserDO.class))).thenReturn(1);
+        when(userMapper.insert(any(UserDO.class))).thenAnswer(inv -> {
+            UserDO u = inv.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        RoleDO role = new RoleDO();
+        role.setId(1L);
+        role.setRoleCode("USER");
+        when(roleMapper.selectOne(any())).thenReturn(role);
+        when(userRoleMapper.selectCount(any())).thenReturn(0L);
 
         RegisterAO ao = new RegisterAO();
         ao.setUsername("alice");
@@ -105,6 +123,15 @@ class AuthServiceTest {
         ao.setUsername("dave");
         ao.setPassword("wrong");
 
+        assertThrows(BusinessException.class, () -> authService.login(ao));
+    }
+
+    @Test
+    void login_shouldFail_whenUserNotExist() {
+        when(userMapper.selectByUsername("ghost")).thenReturn(null);
+        LoginAO ao = new LoginAO();
+        ao.setUsername("ghost");
+        ao.setPassword("any");
         assertThrows(BusinessException.class, () -> authService.login(ao));
     }
 }

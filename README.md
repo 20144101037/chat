@@ -100,9 +100,22 @@ npm run dev
 
 ## 测试
 
+后端使用 JUnit 5 + Mockito 编写单元测试，并通过 JaCoCo 在 `verify` 阶段校验行覆盖率 **≥ 80%**（排除 `config` / `domain` / `mapper` / `ws` 等样板代码包）。
+
 ```bash
 cd backend
-mvn test
+mvn test          # 运行全部单元测试
+mvn verify        # 运行测试并校验覆盖率阈值
+```
+
+测试报告：`backend/target/site/jacoco/index.html`
+
+前端工具函数测试（Vitest）：
+
+```bash
+cd frontend
+npm install
+npm run test
 ```
 
 ## AI 辅助说明
