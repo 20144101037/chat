@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
+import { canAccessRoute } from '../utils/menuPermission';
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -7,14 +9,19 @@ const routes = [
     path: '/app',
     component: () => import('../views/Home.vue'),
     meta: { requiresAuth: true },
+    redirect: '/app/dashboard',
     children: [
+      { path: 'dashboard', name: 'Dashboard', component: () => import('../views/Dashboard.vue') },
       { path: 'rooms', name: 'RoomList', component: () => import('../views/RoomList.vue') },
       { path: 'rooms/:id', name: 'ChatRoom', component: () => import('../views/ChatRoom.vue') },
       { path: 'my-messages', name: 'MyMessages', component: () => import('../views/MyMessages.vue') },
-      { path: 'broadcast', name: 'Broadcast', component: () => import('../views/Broadcast.vue'), meta: { admin: true } },
-      { path: 'audit', name: 'AuditPanel', component: () => import('../views/AuditPanel.vue'), meta: { admin: true } },
-      { path: 'metrics', name: 'MetricsDashboard', component: () => import('../views/MetricsDashboard.vue'), meta: { admin: true } },
-      { path: 'configs', name: 'SystemConfig', component: () => import('../views/SystemConfig.vue'), meta: { admin: true } },
+      { path: 'broadcast', name: 'Broadcast', component: () => import('../views/Broadcast.vue') },
+      { path: 'audit', name: 'AuditPanel', component: () => import('../views/AuditPanel.vue') },
+      { path: 'metrics', name: 'MetricsDashboard', component: () => import('../views/MetricsDashboard.vue') },
+      { path: 'configs', name: 'SystemConfig', component: () => import('../views/SystemConfig.vue') },
+      { path: 'system/users', name: 'UserManage', component: () => import('../views/system/UserManage.vue') },
+      { path: 'system/roles', name: 'RoleManage', component: () => import('../views/system/RoleManage.vue') },
+      { path: 'system/menus', name: 'MenuManage', component: () => import('../views/system/MenuManage.vue') },
     ],
   },
 ];
@@ -24,17 +31,24 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('token');
   if (to.meta.requiresAuth && !token) {
     next('/login');
     return;
   }
-  if (to.meta.admin) {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    const isAdmin = ['ROOM_ADMIN', 'SYS_ADMIN'].includes(user?.role);
-    if (!isAdmin) {
-      next('/app/rooms');
+  if (to.path.startsWith('/app') && token) {
+    const auth = useAuthStore();
+    if (!auth.menusLoaded) {
+      try {
+        await auth.loadMenus();
+      } catch {
+        next('/login');
+        return;
+      }
+    }
+    if (!canAccessRoute(to.path, auth.menuPaths)) {
+      next('/app/dashboard');
       return;
     }
   }

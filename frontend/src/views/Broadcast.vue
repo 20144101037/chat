@@ -1,13 +1,8 @@
 <template>
-  <div class="broadcast">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>消息广播</span>
-          <span class="hint">向所选的一个或多个聊天室推送通知（绕过审核，直接送达）</span>
-        </div>
-      </template>
+  <div class="page broadcast">
+    <PageHeader title="消息广播" subtitle="向一个或多个聊天室推送通知（绕过审核，直接送达）" icon="Promotion" />
 
+    <el-card shadow="never">
       <el-form label-width="90px">
         <el-form-item label="目标聊天室">
           <el-select
@@ -36,8 +31,8 @@
           <el-input v-model="content" type="textarea" :rows="4" maxlength="1000" show-word-limit placeholder="请输入广播内容" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="sending" @click="submit">发送广播</el-button>
-          <el-button @click="reset">重置</el-button>
+          <el-button type="primary" :icon="Promotion" :loading="sending" @click="submit">发送广播</el-button>
+          <el-button :icon="RefreshLeft" @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -47,7 +42,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Promotion, RefreshLeft } from '@element-plus/icons-vue';
 import { roomApi } from '../api';
+import PageHeader from '../components/PageHeader.vue';
 
 const rooms = ref([]);
 const roomsLoading = ref(false);

@@ -1,5 +1,13 @@
 <template>
-  <div class="my-messages">
+  <div class="page">
+    <PageHeader title="我的消息" subtitle="查看自己发送的消息及其审核状态" icon="ChatLineSquare">
+      <template #actions>
+        <el-input v-model="keyword" placeholder="按内容过滤（当前页）" style="width:220px" clearable :prefix-icon="Search" />
+        <el-button type="primary" :icon="Refresh" @click="load">刷新</el-button>
+      </template>
+    </PageHeader>
+
+    <el-card shadow="never">
     <div class="toolbar">
       <el-radio-group v-model="status" @change="onFilter">
         <el-radio-button label="">全部</el-radio-button>
@@ -8,8 +16,6 @@
         <el-radio-button label="REJECTED">已拒绝</el-radio-button>
         <el-radio-button label="TIMEOUT">超时</el-radio-button>
       </el-radio-group>
-      <el-input v-model="keyword" placeholder="按内容过滤（当前页）" style="width:220px" clearable />
-      <el-button type="primary" @click="load">刷新</el-button>
     </div>
 
     <el-table :data="filtered" v-loading="loading" style="width:100%" empty-text="暂无消息">
@@ -40,12 +46,15 @@
       @current-change="onPageChange"
       @size-change="onSizeChange"
     />
+    </el-card>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { Search, Refresh } from '@element-plus/icons-vue';
 import { messageApi, roomApi } from '../api';
+import PageHeader from '../components/PageHeader.vue';
 
 const loading = ref(false);
 const status = ref('');

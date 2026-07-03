@@ -1,14 +1,21 @@
 <template>
-  <div>
+  <div class="page">
+    <PageHeader title="消息审核" subtitle="审核用户提交的待发布消息，支持批量操作" icon="DocumentChecked">
+      <template #actions>
+        <el-tag type="warning" effect="light" size="large">待审核 {{ page.total }}</el-tag>
+        <el-input v-model.number="roomId" placeholder="按聊天室ID筛选" style="width:170px" clearable :prefix-icon="Search" @keyup.enter="load" />
+        <el-button type="primary" :icon="Refresh" @click="load">刷新</el-button>
+      </template>
+    </PageHeader>
+
+    <el-card shadow="never">
     <div class="toolbar">
-      <el-input v-model.number="roomId" placeholder="按聊天室ID筛选" style="width:180px" clearable @keyup.enter="load" />
-      <el-button type="primary" @click="load">刷新</el-button>
-      <el-button type="success" :disabled="!selection.length" @click="batch('APPROVE')">批量通过</el-button>
-      <el-button type="danger" :disabled="!selection.length" @click="batch('REJECT')">批量拒绝</el-button>
-      <el-tag type="info">待审核：{{ page.total }}</el-tag>
+      <el-button type="success" :icon="Select" :disabled="!selection.length" @click="batch('APPROVE')">批量通过</el-button>
+      <el-button type="danger" :icon="CloseBold" :disabled="!selection.length" @click="batch('REJECT')">批量拒绝</el-button>
+      <span v-if="selection.length" class="sel-tip">已选 {{ selection.length }} 条</span>
     </div>
 
-    <el-table :data="page.records" @selection-change="(v) => (selection = v)">
+    <el-table :data="page.records" empty-text="太棒了，没有待审核消息 🎉" @selection-change="(v) => (selection = v)">
       <el-table-column type="selection" width="50" />
       <el-table-column prop="senderName" label="提交者" width="120" />
       <el-table-column prop="roomId" label="聊天室" width="90" />
@@ -34,14 +41,17 @@
       @current-change="onPageChange"
       @size-change="onSizeChange"
     />
+    </el-card>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Search, Refresh, Select, CloseBold } from '@element-plus/icons-vue';
 import { auditApi } from '../api';
 import { createChatSocket } from '../ws/useWebSocket';
+import PageHeader from '../components/PageHeader.vue';
 
 const roomId = ref(null);
 const page = reactive({ records: [], total: 0 });
@@ -101,5 +111,5 @@ onUnmounted(() => socket?.disconnect());
 </script>
 
 <style scoped>
-.toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+.sel-tip { color: var(--text-secondary); font-size: 13px; }
 </style>

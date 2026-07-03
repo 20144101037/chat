@@ -42,7 +42,7 @@ mybatis-plus:
 chat:
   jwt:
     secret: chat-server-jwt-secret-key-please-change-in-prod-0123456789
-    expire-minutes: 720
+    # 令牌有效期已收敛到全局配置表（system_config: jwt.expire-minutes），默认 120 分钟
   audit:
     # 审核最大等待时间（秒），超时自动拒绝
     max-wait-seconds: 30

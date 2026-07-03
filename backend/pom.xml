@@ -44,6 +44,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- Guava：本地缓存（二级缓存 L1）与单飞加载 -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>33.2.1-jre</version>
+        </dependency>
         <!-- Actuator + Prometheus 监控 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

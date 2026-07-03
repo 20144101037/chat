@@ -5,6 +5,32 @@ export const authApi = {
   login: (data) => request.post('/auth/login', data),
 };
 
+export const userApi = {
+  meMenus: () => request.get('/me/menus'),
+};
+
+export const adminApi = {
+  // 用户管理
+  userPage: (params) => request.get('/admin/users', { params }),
+  userRoles: (id) => request.get(`/admin/users/${id}/roles`),
+  assignUserRoles: (id, ids) => request.put(`/admin/users/${id}/roles`, { ids }),
+  updateUserStatus: (id, status) => request.patch(`/admin/users/${id}/status`, { status }),
+  resetUserPassword: (id, password) => request.put(`/admin/users/${id}/password`, { password }),
+  // 角色管理
+  rolePage: (params) => request.get('/admin/roles', { params }),
+  roleAll: () => request.get('/admin/roles/all'),
+  roleCreate: (data) => request.post('/admin/roles', data),
+  roleUpdate: (id, data) => request.put(`/admin/roles/${id}`, data),
+  roleDelete: (id) => request.delete(`/admin/roles/${id}`),
+  roleMenus: (id) => request.get(`/admin/roles/${id}/menus`),
+  assignRoleMenus: (id, ids) => request.put(`/admin/roles/${id}/menus`, { ids }),
+  // 菜单管理
+  menuTree: () => request.get('/admin/menus/tree'),
+  menuCreate: (data) => request.post('/admin/menus', data),
+  menuUpdate: (id, data) => request.put(`/admin/menus/${id}`, data),
+  menuDelete: (id) => request.delete(`/admin/menus/${id}`),
+};
+
 export const roomApi = {
   page: (params) => request.get('/rooms', { params }),
   detail: (id) => request.get(`/rooms/${id}`),
@@ -36,9 +62,7 @@ export const auditApi = {
 
 export const configApi = {
   page: (params) => request.get('/configs', { params }),
-  create: (data) => request.post('/configs', data),
   update: (id, data) => request.put(`/configs/${id}`, data),
-  remove: (id) => request.delete(`/configs/${id}`),
 };
 
 export const metricsApi = {

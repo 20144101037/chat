@@ -1,18 +1,28 @@
 <template>
-  <div>
-    <div class="toolbar">
-      <el-input v-model="query.keyword" placeholder="搜索聊天室名称" style="width:220px" clearable @keyup.enter="load" />
-      <el-select v-model="query.status" placeholder="状态" clearable style="width:140px" @change="load">
-        <el-option label="活跃" value="ACTIVE" />
-        <el-option label="暂停" value="PAUSED" />
-        <el-option label="关闭" value="CLOSED" />
-      </el-select>
-      <el-button type="primary" @click="load">查询</el-button>
-      <el-button v-if="auth.isAdmin" type="success" @click="openCreate">创建聊天室</el-button>
-    </div>
+  <div class="page">
+    <PageHeader title="聊天室列表" subtitle="浏览、加入并管理聊天室" icon="ChatDotRound">
+      <template #actions>
+        <el-input v-model="query.keyword" placeholder="搜索聊天室名称" style="width:200px" clearable :prefix-icon="Search" @keyup.enter="load" />
+        <el-select v-model="query.status" placeholder="全部状态" clearable style="width:130px" @change="load">
+          <el-option label="活跃" value="ACTIVE" />
+          <el-option label="暂停" value="PAUSED" />
+          <el-option label="关闭" value="CLOSED" />
+        </el-select>
+        <el-button type="primary" :icon="Search" @click="load">查询</el-button>
+        <el-button v-if="auth.isAdmin" type="success" :icon="Plus" @click="openCreate">创建聊天室</el-button>
+      </template>
+    </PageHeader>
 
-    <el-table :data="page.records" style="width:100%" v-loading="loading">
-      <el-table-column prop="name" label="名称" min-width="120" />
+    <el-card shadow="never">
+    <el-table :data="page.records" style="width:100%" v-loading="loading" empty-text="暂无聊天室">
+      <el-table-column label="名称" min-width="160">
+        <template #default="{ row }">
+          <div class="room-cell">
+            <el-avatar :size="30" class="room-av">{{ (row.name || '?').charAt(0) }}</el-avatar>
+            <span class="room-nm">{{ row.name }}</span>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="description" label="描述" min-width="140" show-overflow-tooltip />
       <el-table-column label="状态" width="90">
         <template #default="{ row }">
@@ -64,6 +74,7 @@
       :current-page="query.pageNo"
       @current-change="onPageChange"
     />
+    </el-card>
 
     <!-- 创建/修改 弹框 -->
     <el-dialog v-model="dialog" :title="editingId ? '修改聊天室' : '创建聊天室'" width="440px">
@@ -124,8 +135,10 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Search, Plus } from '@element-plus/icons-vue';
 import { roomApi } from '../api';
 import { useAuthStore } from '../stores/auth';
+import PageHeader from '../components/PageHeader.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -278,5 +291,7 @@ onMounted(load);
 </script>
 
 <style scoped>
-.toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+.room-cell { display: flex; align-items: center; gap: 10px; }
+.room-av { background: var(--brand-gradient); color: #fff; font-weight: 600; flex-shrink: 0; }
+.room-nm { font-weight: 600; }
 </style>
