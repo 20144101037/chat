@@ -90,10 +90,9 @@ function statusText(s) {
 function formatTime(t) {
   if (!t) return '';
   const d = new Date(t);
-  const now = new Date();
-  const hm = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (d.toDateString() === now.toDateString()) return hm;
-  return `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function goBack() {
