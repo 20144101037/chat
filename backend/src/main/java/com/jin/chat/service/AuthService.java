@@ -23,4 +23,9 @@ public interface AuthService {
      * 用户登录，返回 JWT 令牌与用户信息。
      */
     LoginVO login(LoginAO ao);
+
+    /**
+     * 用户退出，清除登录统计。
+     */
+    void logout(Long userId);
 }

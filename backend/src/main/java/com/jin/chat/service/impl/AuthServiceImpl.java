@@ -16,6 +16,7 @@ import com.jin.chat.domain.vo.UserVO;
 import com.jin.chat.mapper.RoleMapper;
 import com.jin.chat.mapper.UserMapper;
 import com.jin.chat.mapper.UserRoleMapper;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRoleMapper userRoleMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final LoggedInRepository loggedInRepository;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -101,7 +103,15 @@ public class AuthServiceImpl implements AuthService {
         LoginVO vo = new LoginVO();
         vo.setToken(jwtUtil.generateToken(loginUser));
         vo.setUser(toVO(user));
+        loggedInRepository.markLoggedIn(user.getId());
         return vo;
+    }
+
+    @Override
+    public void logout(Long userId) {
+        if (userId != null) {
+            loggedInRepository.markLoggedOut(userId);
+        }
     }
 
     private UserVO toVO(UserDO user) {

@@ -65,11 +65,12 @@ import { ElMessage } from 'element-plus';
 import { ArrowLeft, Promotion, InfoFilled } from '@element-plus/icons-vue';
 import { messageApi, roomApi } from '../api';
 import { useAuthStore } from '../stores/auth';
-import { createChatSocket } from '../ws/useWebSocket';
+import { useWsStore } from '../stores/ws';
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
+const ws = useWsStore();
 const roomId = route.params.id;
 const messages = reactive([]);
 const room = reactive({ name: '', status: '', memberCount: null, maxUsers: null });
@@ -79,7 +80,16 @@ const listEl = ref(null);
 const hasMore = ref(false);
 const loadingMore = ref(false);
 const PAGE_SIZE = 30;
-let socket = null;
+
+function appendMessage(payload) {
+  const msg = {
+    ...payload,
+    messageId: payload.messageId ?? payload.id,
+    id: payload.messageId ?? payload.id,
+  };
+  messages.push(msg);
+  scrollToBottom();
+}
 
 function isMine(m) {
   return m.senderId != null && m.senderId === auth.user?.id;
@@ -145,19 +155,13 @@ async function send() {
 onMounted(async () => {
   await loadRoom();
   await loadHistory();
-  socket = createChatSocket();
-  socket.connect(localStorage.getItem('token'), {
-    onConnect: () => {
-      socket.subscribeRoom(roomId, (payload) => {
-        messages.push(payload);
-        scrollToBottom();
-      });
-      socket.subscribeNotifications((n) => ElMessage.info(n.content));
-    },
-  });
+  await ws.ensureConnected();
+  ws.subscribeRoom(roomId, appendMessage);
 });
 
-onUnmounted(() => socket?.disconnect());
+onUnmounted(() => {
+  ws.unsubscribeRoom(roomId);
+});
 </script>
 
 <style scoped>

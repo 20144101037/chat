@@ -11,6 +11,7 @@ import com.jin.chat.domain.vo.UserVO;
 import com.jin.chat.mapper.RoleMapper;
 import com.jin.chat.mapper.UserMapper;
 import com.jin.chat.mapper.UserRoleMapper;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.service.impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -50,6 +52,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private LoggedInRepository loggedInRepository;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -110,6 +115,13 @@ class AuthServiceTest {
         LoginVO vo = authService.login(ao);
         assertEquals("mock-token", vo.getToken());
         assertEquals("carol", vo.getUser().getUsername());
+        verify(loggedInRepository).markLoggedIn(1L);
+    }
+
+    @Test
+    void logout_shouldMarkLoggedOut() {
+        authService.logout(5L);
+        verify(loggedInRepository).markLoggedOut(5L);
     }
 
     @Test

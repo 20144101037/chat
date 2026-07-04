@@ -16,6 +16,7 @@ import com.jin.chat.domain.vo.AdminUserVO;
 import com.jin.chat.mapper.RoleMapper;
 import com.jin.chat.mapper.UserMapper;
 import com.jin.chat.mapper.UserRoleMapper;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.repository.SessionRepository;
 import com.jin.chat.repository.TokenValidityRepository;
 import com.jin.chat.service.UserAdminService;
@@ -55,6 +56,7 @@ public class UserAdminServiceImpl implements UserAdminService {
     private final PasswordEncoder passwordEncoder;
     private final TokenValidityRepository tokenValidityRepository;
     private final SessionRepository sessionRepository;
+    private final LoggedInRepository loggedInRepository;
 
     @Override
     public PageResult<AdminUserVO> page(UserQuery query) {
@@ -143,10 +145,11 @@ public class UserAdminServiceImpl implements UserAdminService {
         }
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         userMapper.updateById(user);
-        // 事务提交后使旧令牌失效并清理在线状态，实现强制下线
+        // 事务提交后使旧令牌失效并清理登录/WebSocket 状态，实现强制下线
         long now = System.currentTimeMillis();
         TransactionUtils.afterCommit(() -> {
             tokenValidityRepository.invalidateBefore(userId, now);
+            loggedInRepository.markLoggedOut(userId);
             sessionRepository.offline(userId);
         });
     }

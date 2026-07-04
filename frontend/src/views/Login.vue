@@ -55,11 +55,6 @@
             </el-form>
           </el-tab-pane>
         </el-tabs>
-
-        <div class="demo-tip">
-          <el-icon><InfoFilled /></el-icon>
-          <span>默认管理员账号：<b>admin</b> / <b>admin123</b></span>
-        </div>
       </div>
     </div>
   </div>
@@ -69,7 +64,7 @@
 import { reactive, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { User, Lock, Avatar, InfoFilled } from '@element-plus/icons-vue';
+import { User, Lock, Avatar } from '@element-plus/icons-vue';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../api';
 
@@ -178,13 +173,6 @@ async function onRegister() {
 .form-head h2 { margin: 0 0 6px; font-size: 24px; font-weight: 700; color: var(--text-main); }
 .form-head p { margin: 0; font-size: 14px; color: var(--text-secondary); }
 .submit-btn { width: 100%; height: 44px; font-size: 16px; letter-spacing: 4px; margin-top: 6px; }
-.demo-tip {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 20px; padding: 10px 14px;
-  background: var(--el-color-primary-light-9);
-  border-radius: 10px; color: var(--text-regular); font-size: 13px;
-}
-.demo-tip b { color: var(--brand-1); }
 
 @media (max-width: 860px) {
   .brand-side { display: none; }

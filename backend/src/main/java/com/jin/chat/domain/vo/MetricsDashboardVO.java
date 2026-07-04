@@ -12,7 +12,7 @@ import java.time.OffsetDateTime;
 @Data
 public class MetricsDashboardVO {
 
-    /** 在线用户数 */
+    /** 已登录用户数（登录成功且未退出/未过期） */
     private long onlineUsers;
 
     /** 待审核队列长度 */

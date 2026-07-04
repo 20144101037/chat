@@ -79,13 +79,16 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { ElMessage } from 'element-plus';
 import { ArrowRight, CaretBottom, Odometer, SwitchButton } from '@element-plus/icons-vue';
 import { useAuthStore } from '../stores/auth';
+import { useWsStore } from '../stores/ws';
 import { iconOf } from '../constants/menuIcons';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const ws = useWsStore();
 const collapsed = ref(false);
 
 const menus = computed(() => auth.menus);
@@ -127,8 +130,7 @@ const activeMenu = computed(() => {
 
 function onCommand(cmd) {
   if (cmd === 'logout') {
-    auth.logout();
-    router.push('/login');
+    auth.logout().then(() => router.push('/login'));
   } else if (cmd === 'dashboard') {
     router.push('/app/dashboard');
   }
@@ -139,6 +141,14 @@ onMounted(async () => {
     await auth.loadMenus();
   } catch (e) {
     // 菜单加载失败时保持空侧边栏，错误已由拦截器提示
+  }
+  try {
+    await ws.ensureConnected();
+    ws.subscribeNotifications((n) => {
+      if (n?.content) ElMessage.info(n.content);
+    });
+  } catch (e) {
+    // WebSocket 连接失败时不阻断主界面
   }
 });
 </script>

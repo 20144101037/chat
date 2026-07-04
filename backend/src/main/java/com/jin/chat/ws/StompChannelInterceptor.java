@@ -1,6 +1,7 @@
 package com.jin.chat.ws;
 
 import com.jin.chat.common.context.LoginUser;
+import com.jin.chat.repository.SessionRepository;
 import com.jin.chat.service.MemberService;
 import com.jin.chat.service.MenuPermissionService;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     @Autowired
     private MenuPermissionService menuPermissionService;
 
+    @Lazy
+    @Autowired
+    private SessionRepository sessionRepository;
+
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
@@ -51,33 +56,80 @@ public class StompChannelInterceptor implements ChannelInterceptor {
         }
 
         if (StompCommand.CONNECT.equals(command)) {
-            LoginUser user = accessor.getSessionAttributes() == null ? null
-                    : (LoginUser) accessor.getSessionAttributes().get(WebSocketAuthInterceptor.ATTR_LOGIN_USER);
+            LoginUser user = resolveLoginUser(accessor);
             if (user != null) {
                 accessor.setUser(new StompPrincipal(user));
+                // SessionConnectedEvent 中 Principal 可能尚未就绪，在此记录在线状态更可靠
+                sessionRepository.online(user.getUserId(), accessor.getSessionId());
+                log.info("STOMP 连接上线 userId={}, sessionId={}", user.getUserId(), accessor.getSessionId());
+            }
+        } else if (StompCommand.DISCONNECT.equals(command)) {
+            LoginUser user = resolveLoginUser(accessor);
+            if (user != null) {
+                sessionRepository.offline(user.getUserId());
+                log.info("STOMP 断开下线 userId={}, sessionId={}", user.getUserId(), accessor.getSessionId());
             }
         } else if (StompCommand.SUBSCRIBE.equals(command)) {
+            LoginUser user = resolveLoginUser(accessor);
+            if (user != null) {
+                sessionRepository.refreshOnline(user.getUserId());
+                ensurePrincipal(accessor, user);
+            }
             validateSubscribe(accessor);
         }
         return message;
     }
 
+    /** SUBSCRIBE 帧上 Principal 可能未携带，需从 session 补全供后续链路使用 */
+    private void ensurePrincipal(StompHeaderAccessor accessor, LoginUser user) {
+        if (!(accessor.getUser() instanceof StompPrincipal)) {
+            accessor.setUser(new StompPrincipal(user));
+        }
+    }
+
+    private LoginUser resolveLoginUser(StompHeaderAccessor accessor) {
+        if (accessor.getUser() instanceof StompPrincipal principal) {
+            return principal.getLoginUser();
+        }
+        if (accessor.getSessionAttributes() != null) {
+            return (LoginUser) accessor.getSessionAttributes().get(WebSocketAuthInterceptor.ATTR_LOGIN_USER);
+        }
+        return null;
+    }
+
+    /**
+     * 仅对敏感 topic 鉴权；个人通知 /user/queue/* 及 Spring 内部解析后的 /queue/* 不做拦截，
+     * 避免 getUser() 未就绪时误杀连接。
+     */
     private void validateSubscribe(StompHeaderAccessor accessor) {
         String destination = accessor.getDestination();
-        if (destination == null || !(accessor.getUser() instanceof StompPrincipal principal)) {
-            throw new IllegalArgumentException("未认证的订阅请求");
+        if (destination == null) {
+            return;
         }
-        LoginUser user = principal.getLoginUser();
-
         if (destination.startsWith(ROOM_TOPIC_PREFIX)) {
+            LoginUser user = requireUser(accessor, destination);
             Long roomId = parseRoomId(destination);
             if (!memberService.isJoined(user.getUserId(), roomId)) {
+                log.warn("无权订阅聊天室 userId={}, roomId={}", user.getUserId(), roomId);
                 throw new IllegalArgumentException("无权订阅该聊天室: " + roomId);
             }
-        } else if (destination.equals(AUDIT_TOPIC)
-                && !menuPermissionService.hasMenuPath(user.getUserId(), MENU_AUDIT)) {
-            throw new IllegalArgumentException("无权订阅审核通道");
+        } else if (destination.equals(AUDIT_TOPIC)) {
+            LoginUser user = requireUser(accessor, destination);
+            if (!menuPermissionService.hasMenuPath(user.getUserId(), MENU_AUDIT)) {
+                log.warn("无权订阅审核通道 userId={}", user.getUserId());
+                throw new IllegalArgumentException("无权订阅审核通道");
+            }
         }
+    }
+
+    private LoginUser requireUser(StompHeaderAccessor accessor, String destination) {
+        LoginUser user = resolveLoginUser(accessor);
+        if (user == null) {
+            log.warn("订阅被拒绝：无法解析用户 destination={}", destination);
+            throw new IllegalArgumentException("未认证的订阅请求");
+        }
+        ensurePrincipal(accessor, user);
+        return user;
     }
 
     private Long parseRoomId(String destination) {

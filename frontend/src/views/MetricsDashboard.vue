@@ -1,6 +1,6 @@
 <template>
   <div class="page metrics" v-loading="loading">
-    <PageHeader title="性能监控" subtitle="在线用户、消息延迟、审核队列与连接池实时指标" icon="DataLine">
+    <PageHeader title="性能监控" subtitle="在线人数、消息延迟、审核队列与连接池实时指标" icon="DataLine">
       <template #actions>
         <span class="ts" v-if="data.timestamp">采样：{{ formatTime(data.timestamp) }}</span>
         <el-switch v-model="autoRefresh" active-text="自动刷新(5s)" />
@@ -10,7 +10,7 @@
 
     <el-row :gutter="16">
       <el-col :span="6">
-        <el-card shadow="hover"><el-statistic title="在线用户数" :value="data.onlineUsers" /></el-card>
+        <el-card shadow="hover"><el-statistic title="在线人数" :value="data.onlineUsers" /></el-card>
       </el-col>
       <el-col :span="6">
         <el-card shadow="hover"><el-statistic title="待审核队列长度" :value="data.auditQueueLength" /></el-card>

@@ -27,6 +27,14 @@ public class SessionRepository {
                 sessionId, ONLINE_TTL_MINUTES, TimeUnit.MINUTES);
     }
 
+    /** 刷新在线标记 TTL（心跳/订阅时续期） */
+    public void refreshOnline(Long userId) {
+        String key = RedisKeyConst.SESSION_ONLINE_PREFIX + userId;
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+            redisTemplate.expire(key, ONLINE_TTL_MINUTES, TimeUnit.MINUTES);
+        }
+    }
+
     public void offline(Long userId) {
         redisTemplate.delete(RedisKeyConst.SESSION_ONLINE_PREFIX + userId);
         redisTemplate.delete(RedisKeyConst.SESSION_ROOMS_PREFIX + userId);

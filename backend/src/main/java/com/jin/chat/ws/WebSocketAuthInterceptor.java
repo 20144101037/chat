@@ -2,6 +2,7 @@ package com.jin.chat.ws;
 
 import com.jin.chat.common.context.LoginUser;
 import com.jin.chat.common.util.JwtUtil;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.repository.TokenValidityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
 
     private final JwtUtil jwtUtil;
     private final TokenValidityRepository tokenValidityRepository;
+    private final LoggedInRepository loggedInRepository;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
@@ -46,6 +48,7 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
             return false;
         }
         attributes.put(ATTR_LOGIN_USER, user);
+        loggedInRepository.refreshLoggedIn(user.getUserId());
         return true;
     }
 

@@ -2,7 +2,7 @@ package com.jin.chat.service.impl;
 
 import com.jin.chat.domain.vo.MetricsDashboardVO;
 import com.jin.chat.repository.AuditQueueRepository;
-import com.jin.chat.repository.SessionRepository;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.service.MonitorService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 public class MonitorServiceImpl implements MonitorService {
 
     private final MeterRegistry meterRegistry;
-    private final SessionRepository sessionRepository;
+    private final LoggedInRepository loggedInRepository;
     private final AuditQueueRepository auditQueueRepository;
 
     private Timer auditLatencyTimer;
@@ -70,7 +70,7 @@ public class MonitorServiceImpl implements MonitorService {
     @Override
     public MetricsDashboardVO dashboard() {
         MetricsDashboardVO vo = new MetricsDashboardVO();
-        vo.setOnlineUsers(sessionRepository.onlineCount());
+        vo.setOnlineUsers(loggedInRepository.loggedInCount());
         vo.setAuditQueueLength(auditQueueRepository.pendingSize());
 
         // 审核延迟分位数

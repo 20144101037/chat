@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { authApi, userApi } from '../api';
 import { collectMenuPaths } from '../utils/menuPermission';
+import { useWsStore } from './ws';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -32,7 +33,15 @@ export const useAuthStore = defineStore('auth', {
       this.menusLoaded = true;
       return this.menus;
     },
-    logout() {
+    async logout() {
+      useWsStore().disconnect();
+      try {
+        if (this.token) {
+          await authApi.logout();
+        }
+      } catch (e) {
+        // 忽略注销接口失败，本地仍清除登录态
+      }
       this.token = '';
       this.user = null;
       this.menus = [];

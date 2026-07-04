@@ -1,5 +1,6 @@
 package com.jin.chat.ws;
 
+import com.jin.chat.common.context.LoginUser;
 import com.jin.chat.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,11 +30,12 @@ public class WebSocketEventListener {
 
     @EventListener
     public void onConnected(SessionConnectedEvent event) {
+        // 在线状态已在 StompChannelInterceptor CONNECT 中写入，此处仅作兜底
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         Long userId = currentUserId(accessor);
         if (userId != null) {
-            sessionRepository.online(userId, accessor.getSessionId());
-            log.info("用户上线 userId={}, sessionId={}", userId, accessor.getSessionId());
+            sessionRepository.refreshOnline(userId);
+            log.debug("会话已连接 userId={}, sessionId={}", userId, accessor.getSessionId());
         }
     }
 
@@ -56,17 +58,21 @@ public class WebSocketEventListener {
 
     @EventListener
     public void onDisconnect(SessionDisconnectEvent event) {
+        // 下线已在 StompChannelInterceptor DISCONNECT 中处理，此处兜底刷新订阅清理
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         Long userId = currentUserId(accessor);
         if (userId != null) {
-            sessionRepository.offline(userId);
-            log.info("用户下线 userId={}, sessionId={}", userId, accessor.getSessionId());
+            log.debug("会话已断开 userId={}, sessionId={}", userId, accessor.getSessionId());
         }
     }
 
     private Long currentUserId(StompHeaderAccessor accessor) {
         if (accessor.getUser() instanceof StompPrincipal principal) {
             return principal.getLoginUser().getUserId();
+        }
+        if (accessor.getSessionAttributes() != null) {
+            LoginUser user = (LoginUser) accessor.getSessionAttributes().get(WebSocketAuthInterceptor.ATTR_LOGIN_USER);
+            return user != null ? user.getUserId() : null;
         }
         return null;
     }

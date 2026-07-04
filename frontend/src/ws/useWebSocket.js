@@ -16,20 +16,23 @@ export function createChatSocket() {
 
   function doSubscribe(destination, rawHandler) {
     if (!client || !connected) return;
-    if (stompSubs.has(destination)) return;
+    stompSubs.get(destination)?.unsubscribe();
     const sub = client.subscribe(destination, rawHandler);
     stompSubs.set(destination, sub);
   }
 
   function resubscribeAll() {
-    // 重连后 stomp 订阅已失效，清空并按已登记的 handler 重新订阅
     stompSubs.clear();
     handlers.forEach((rawHandler, destination) => doSubscribe(destination, rawHandler));
   }
 
   function connect(token, { onConnect, onError, onWsClose } = {}) {
+    if (client?.active) {
+      onConnect?.();
+      return;
+    }
     client = new Client({
-      webSocketFactory: () => new SockJS(`/ws?token=${token}`),
+      webSocketFactory: () => new SockJS(`/ws?token=${encodeURIComponent(token)}`),
       reconnectDelay: 2000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
@@ -41,6 +44,7 @@ export function createChatSocket() {
       onStompError: (frame) => onError?.(frame),
       onWebSocketClose: () => {
         connected = false;
+        stompSubs.clear();
         onWsClose?.();
       },
     });
@@ -51,8 +55,9 @@ export function createChatSocket() {
     const destination = `/topic/room.${roomId}`;
     const rawHandler = (msg) => {
       const payload = JSON.parse(msg.body);
-      if (payload.messageId && seenMessageIds.has(payload.messageId)) return;
-      if (payload.messageId) seenMessageIds.add(payload.messageId);
+      const id = payload.messageId ?? payload.id;
+      if (id != null && seenMessageIds.has(String(id))) return;
+      if (id != null) seenMessageIds.add(String(id));
       handler(payload);
     };
     handlers.set(destination, rawHandler);
@@ -73,6 +78,13 @@ export function createChatSocket() {
     doSubscribe(destination, rawHandler);
   }
 
+  function unsubscribeNotifications() {
+    const destination = '/user/queue/notifications';
+    stompSubs.get(destination)?.unsubscribe();
+    stompSubs.delete(destination);
+    handlers.delete(destination);
+  }
+
   function subscribeAudit(handler) {
     const destination = '/topic/audit';
     const rawHandler = (msg) => handler(JSON.parse(msg.body));
@@ -80,13 +92,31 @@ export function createChatSocket() {
     doSubscribe(destination, rawHandler);
   }
 
+  function unsubscribeAudit() {
+    const destination = '/topic/audit';
+    stompSubs.get(destination)?.unsubscribe();
+    stompSubs.delete(destination);
+    handlers.delete(destination);
+  }
+
   function disconnect() {
     stompSubs.forEach((s) => s.unsubscribe());
     stompSubs.clear();
     handlers.clear();
+    seenMessageIds.clear();
     connected = false;
     client?.deactivate();
+    client = null;
   }
 
-  return { connect, subscribeRoom, unsubscribeRoom, subscribeNotifications, subscribeAudit, disconnect };
+  return {
+    connect,
+    subscribeRoom,
+    unsubscribeRoom,
+    subscribeNotifications,
+    unsubscribeNotifications,
+    subscribeAudit,
+    unsubscribeAudit,
+    disconnect,
+  };
 }

@@ -21,8 +21,11 @@ public final class RedisKeyConst {
     /** 审核分布式锁前缀： chat:audit:lock:{messageId} */
     public static final String AUDIT_LOCK_PREFIX = "chat:audit:lock:";
 
-    /** 在线用户会话： chat:session:online:{userId} */
+    /** 在线用户会话（WebSocket）： chat:session:online:{userId} */
     public static final String SESSION_ONLINE_PREFIX = "chat:session:online:";
+
+    /** 已登录用户（REST 登录成功且未退出/未过期）： chat:auth:logged-in:{userId} */
+    public static final String LOGGED_IN_PREFIX = "chat:auth:logged-in:";
 
     /** 用户已订阅房间集合： chat:session:rooms:{userId} */
     public static final String SESSION_ROOMS_PREFIX = "chat:session:rooms:";

@@ -13,6 +13,7 @@ import com.jin.chat.domain.query.UserQuery;
 import com.jin.chat.mapper.RoleMapper;
 import com.jin.chat.mapper.UserMapper;
 import com.jin.chat.mapper.UserRoleMapper;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.repository.SessionRepository;
 import com.jin.chat.repository.TokenValidityRepository;
 import com.jin.chat.service.impl.UserAdminServiceImpl;
@@ -49,6 +50,8 @@ class UserAdminServiceTest {
     private TokenValidityRepository tokenValidityRepository;
     @Mock
     private SessionRepository sessionRepository;
+    @Mock
+    private LoggedInRepository loggedInRepository;
 
     @InjectMocks
     private UserAdminServiceImpl userAdminService;
@@ -128,6 +131,7 @@ class UserAdminServiceTest {
         ArgumentCaptor<Long> userIdCaptor = ArgumentCaptor.forClass(Long.class);
         verify(tokenValidityRepository).invalidateBefore(userIdCaptor.capture(), anyLong());
         assertEquals(7L, userIdCaptor.getValue());
+        verify(loggedInRepository).markLoggedOut(7L);
         verify(sessionRepository).offline(7L);
     }
 

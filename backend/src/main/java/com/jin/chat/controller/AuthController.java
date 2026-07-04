@@ -1,6 +1,7 @@
 package com.jin.chat.controller;
 
 import com.jin.chat.common.api.ResultData;
+import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.domain.ao.LoginAO;
 import com.jin.chat.domain.ao.RegisterAO;
 import com.jin.chat.domain.vo.LoginVO;
@@ -35,5 +36,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResultData<LoginVO> login(@Valid @RequestBody LoginAO ao) {
         return ResultData.success(authService.login(ao));
+    }
+
+    @PostMapping("/logout")
+    public ResultData<Void> logout() {
+        authService.logout(UserContextHolder.currentUserId());
+        return ResultData.success(null);
     }
 }

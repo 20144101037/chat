@@ -4,6 +4,7 @@ import com.jin.chat.common.context.LoginUser;
 import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.common.exception.BusinessException;
 import com.jin.chat.common.util.JwtUtil;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.repository.TokenValidityRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,6 +25,8 @@ class JwtAuthInterceptorTest {
     private JwtUtil jwtUtil;
     @Mock
     private TokenValidityRepository tokenValidityRepository;
+    @Mock
+    private LoggedInRepository loggedInRepository;
     @Mock
     private HttpServletRequest request;
     @Mock
@@ -55,6 +58,7 @@ class JwtAuthInterceptorTest {
 
         assertTrue(interceptor.preHandle(request, response, new Object()));
         assertEquals(1L, UserContextHolder.currentUserId());
+        verify(loggedInRepository).refreshLoggedIn(1L);
 
         interceptor.afterCompletion(request, response, new Object(), null);
         assertNull(UserContextHolder.get());

@@ -5,6 +5,7 @@ import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.common.exception.BusinessException;
 import com.jin.chat.common.exception.ErrorCodeEnum;
 import com.jin.chat.common.util.JwtUtil;
+import com.jin.chat.repository.LoggedInRepository;
 import com.jin.chat.repository.TokenValidityRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +30,7 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
 
     private final JwtUtil jwtUtil;
     private final TokenValidityRepository tokenValidityRepository;
+    private final LoggedInRepository loggedInRepository;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -44,6 +46,7 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
         if (!tokenValidityRepository.isValid(user.getUserId(), user.getIssuedAt())) {
             throw new BusinessException(ErrorCodeEnum.TOKEN_INVALID);
         }
+        loggedInRepository.refreshLoggedIn(user.getUserId());
         UserContextHolder.set(user);
         return true;
     }

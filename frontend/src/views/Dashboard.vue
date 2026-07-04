@@ -68,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { roomApi, messageApi, auditApi, metricsApi } from '../api';
@@ -79,6 +79,7 @@ const auth = useAuthStore();
 
 const myRooms = ref([]);
 const counters = reactive({ totalRooms: 0, myRooms: 0, myPending: 0, approved: 0, pendingAudit: 0, online: 0 });
+let onlineTimer = null;
 
 const roleTextMap = { SYS_ADMIN: '系统管理员', ROOM_ADMIN: '聊天室管理员', USER: '普通用户' };
 const roleText = computed(() => roleTextMap[auth.user?.role] || auth.user?.role || '成员');
@@ -105,7 +106,7 @@ const stats = computed(() => {
     { label: '我的已通过', value: counters.approved, icon: 'CircleCheck', bg: 'linear-gradient(135deg,#3fce7a,#12b76a)' },
   ];
   if (auth.hasMenuPath('/app/metrics')) {
-    base.push({ label: '在线用户', value: counters.online, icon: 'User', bg: 'linear-gradient(135deg,#38bdf8,#0ea5e9)' });
+    base.push({ label: '在线人数', value: counters.online, icon: 'User', bg: 'linear-gradient(135deg,#38bdf8,#0ea5e9)' });
   } else {
     base.push({ label: '聊天室总数', value: counters.totalRooms, icon: 'Files', bg: 'linear-gradient(135deg,#38bdf8,#0ea5e9)' });
   }
@@ -151,6 +152,20 @@ async function loadCounters() {
 onMounted(async () => {
   await auth.loadMenus();
   await loadCounters();
+  if (auth.hasMenuPath('/app/metrics')) {
+    onlineTimer = setInterval(async () => {
+      try {
+        const res = await metricsApi.dashboard();
+        counters.online = res.onlineUsers;
+      } catch (e) {
+        // 忽略轮询失败
+      }
+    }, 15000);
+  }
+});
+
+onUnmounted(() => {
+  if (onlineTimer) clearInterval(onlineTimer);
 });
 </script>
 

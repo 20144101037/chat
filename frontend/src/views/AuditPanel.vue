@@ -50,7 +50,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Refresh, Select, CloseBold } from '@element-plus/icons-vue';
 import { auditApi } from '../api';
-import { createChatSocket } from '../ws/useWebSocket';
+import { useWsStore } from '../stores/ws';
 import PageHeader from '../components/PageHeader.vue';
 
 const roomId = ref(null);
@@ -58,7 +58,7 @@ const page = reactive({ records: [], total: 0 });
 const selection = ref([]);
 const pageNo = ref(1);
 const pageSize = ref(10);
-let socket = null;
+const ws = useWsStore();
 
 async function load() {
   const res = await auditApi.pending({
@@ -99,15 +99,13 @@ async function batch(action) {
   load();
 }
 
-onMounted(() => {
+onMounted(async () => {
   load();
-  socket = createChatSocket();
-  socket.connect(localStorage.getItem('token'), {
-    onConnect: () => socket.subscribeAudit(() => load()),
-  });
+  await ws.ensureConnected();
+  ws.subscribeAudit(() => load());
 });
 
-onUnmounted(() => socket?.disconnect());
+onUnmounted(() => ws.unsubscribeAudit());
 </script>
 
 <style scoped>
