@@ -10,7 +10,6 @@ export const menuIconMap = {
   system: 'Management',
   'system:users': 'User',
   'system:roles': 'UserFilled',
-  'system:menus': 'Menu',
 };
 
 export function iconOf(menuKey) {

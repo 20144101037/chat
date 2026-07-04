@@ -6,12 +6,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jin.chat.common.api.PageResult;
 import com.jin.chat.common.cache.TwoLevelCache;
 import com.jin.chat.common.constant.RedisKeyConst;
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.common.exception.BusinessException;
 import com.jin.chat.common.exception.ErrorCodeEnum;
 import com.jin.chat.common.util.TransactionUtils;
 import com.jin.chat.domain.ao.ConfigUpdateAO;
 import com.jin.chat.domain.entity.SysConfigDO;
 import com.jin.chat.domain.query.ConfigQuery;
+import com.jin.chat.domain.vo.ConfigRuntimeVO;
 import com.jin.chat.mapper.SysConfigMapper;
 import com.jin.chat.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
@@ -42,12 +44,12 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
 
     /** 数值型配置的取值范围约束：configKey -> [min, max]（闭区间），用于合法性校验 */
     private static final Map<String, int[]> NUMERIC_RANGES = Map.of(
-            "jwt.expire-minutes", new int[]{1, 43200},
-            "audit.max-wait-seconds", new int[]{5, 3600},
-            "audit.scan-interval-ms", new int[]{1000, 600000},
-            "message.max-length", new int[]{1, 10000},
-            "room.default-max-users", new int[]{1, 100000},
-            "push.retry-times", new int[]{0, 10}
+            SysConfigKeys.JWT_EXPIRE_MINUTES, new int[]{1, 43200},
+            SysConfigKeys.AUDIT_MAX_WAIT_SECONDS, new int[]{5, 3600},
+            SysConfigKeys.AUDIT_SCAN_INTERVAL_MS, new int[]{1000, 600000},
+            SysConfigKeys.MESSAGE_MAX_LENGTH, new int[]{1, 10000},
+            SysConfigKeys.ROOM_DEFAULT_MAX_USERS, new int[]{1, 100000},
+            SysConfigKeys.PUSH_RETRY_TIMES, new int[]{0, 10}
     );
 
     @Override
@@ -126,6 +128,14 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
             log.warn("配置项 {} 值 {} 无法解析为整数，使用默认值 {}", key, value, defaultValue);
             return defaultValue;
         }
+    }
+
+    @Override
+    public ConfigRuntimeVO getRuntime() {
+        ConfigRuntimeVO vo = new ConfigRuntimeVO();
+        vo.setRoomDefaultMaxUsers(getInt(SysConfigKeys.ROOM_DEFAULT_MAX_USERS, SysConfigKeys.DEFAULT_ROOM_MAX_USERS));
+        vo.setMessageMaxLength(getInt(SysConfigKeys.MESSAGE_MAX_LENGTH, SysConfigKeys.DEFAULT_MESSAGE_MAX_LENGTH));
+        return vo;
     }
 
     private SysConfigDO getByKey(String key) {

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jin.chat.common.api.PageResult;
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.common.exception.BusinessException;
 import com.jin.chat.common.exception.ErrorCodeEnum;
@@ -24,6 +25,7 @@ import com.jin.chat.service.ChatRoomService;
 import com.jin.chat.service.MemberService;
 import com.jin.chat.service.MessageService;
 import com.jin.chat.service.PushService;
+import com.jin.chat.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, MessageDO> im
     private final MemberService memberService;
     private final PushService pushService;
     private final AuditQueueRepository auditQueueRepository;
+    private final SysConfigService sysConfigService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -63,8 +66,13 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, MessageDO> im
         if (RoomStatusEnum.PAUSED.name().equals(room.getStatus())) {
             throw new BusinessException(ErrorCodeEnum.ROOM_PAUSED);
         }
-        // 只有已加入成员才能发言
         memberService.assertJoined(userId, roomId);
+
+        int maxLength = sysConfigService.getInt(SysConfigKeys.MESSAGE_MAX_LENGTH, SysConfigKeys.DEFAULT_MESSAGE_MAX_LENGTH);
+        if (ao.getContent() != null && ao.getContent().length() > maxLength) {
+            throw new BusinessException(ErrorCodeEnum.MESSAGE_CONTENT_TOO_LONG,
+                    String.format("消息内容不能超过 %d 个字符", maxLength));
+        }
 
         OffsetDateTime now = OffsetDateTime.now();
         MessageDO message = new MessageDO();

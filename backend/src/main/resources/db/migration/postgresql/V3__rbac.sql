@@ -78,9 +78,6 @@ SELECT (SELECT id FROM menus WHERE menu_key = 'system'), 'system:users', '用户
 INSERT INTO menus (parent_id, menu_key, name, path, sort, menu_type)
 SELECT (SELECT id FROM menus WHERE menu_key = 'system'), 'system:roles', '角色管理', '/app/system/roles', 2, 'MENU'
     ON CONFLICT DO NOTHING;
-INSERT INTO menus (parent_id, menu_key, name, path, sort, menu_type)
-SELECT (SELECT id FROM menus WHERE menu_key = 'system'), 'system:menus', '菜单权限管理', '/app/system/menus', 3, 'MENU'
-    ON CONFLICT DO NOTHING;
 
 -- 角色-菜单授权
 -- 系统管理员：全部菜单

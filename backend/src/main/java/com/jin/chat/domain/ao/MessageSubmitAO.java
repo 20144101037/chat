@@ -13,6 +13,6 @@ import lombok.Data;
 public class MessageSubmitAO {
 
     @NotBlank(message = "消息内容不能为空")
-    @Size(max = 2000, message = "消息内容过长")
+    @Size(max = 10000, message = "消息内容过长")
     private String content;
 }

@@ -5,6 +5,7 @@ import com.jin.chat.common.api.ResultData;
 import com.jin.chat.domain.ao.ConfigUpdateAO;
 import com.jin.chat.domain.entity.SysConfigDO;
 import com.jin.chat.domain.query.ConfigQuery;
+import com.jin.chat.domain.vo.ConfigRuntimeVO;
 import com.jin.chat.service.MenuPermissionService;
 import com.jin.chat.service.SysConfigService;
 import jakarta.validation.Valid;
@@ -33,6 +34,12 @@ public class SysConfigController {
     public ResultData<PageResult<SysConfigDO>> page(ConfigQuery query) {
         menuPermissionService.requireMenuPath(MENU_CONFIGS);
         return ResultData.success(sysConfigService.page(query));
+    }
+
+    /** 运行时配置快照（登录即可读，供创建聊天室/发消息等使用） */
+    @GetMapping("/runtime")
+    public ResultData<ConfigRuntimeVO> runtime() {
+        return ResultData.success(sysConfigService.getRuntime());
     }
 
     @PutMapping("/{id}")

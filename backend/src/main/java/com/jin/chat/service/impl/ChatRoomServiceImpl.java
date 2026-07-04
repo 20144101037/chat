@@ -8,6 +8,7 @@ import com.jin.chat.common.context.LoginUser;
 import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.common.exception.BusinessException;
 import com.jin.chat.common.exception.ErrorCodeEnum;
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.domain.ao.RoomCreateAO;
 import com.jin.chat.domain.ao.RoomUpdateAO;
 import com.jin.chat.domain.entity.ChatRoomDO;
@@ -20,6 +21,7 @@ import com.jin.chat.domain.vo.RoomVO;
 import com.jin.chat.mapper.ChatRoomMapper;
 import com.jin.chat.mapper.UserChatRoomMapper;
 import com.jin.chat.service.ChatRoomService;
+import com.jin.chat.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,7 @@ import java.util.Optional;
 public class ChatRoomServiceImpl extends ServiceImpl<ChatRoomMapper, ChatRoomDO> implements ChatRoomService {
 
     private final UserChatRoomMapper userChatRoomMapper;
+    private final SysConfigService sysConfigService;
 
     @Override
     public RoomVO createRoom(RoomCreateAO ao) {
@@ -48,7 +51,12 @@ public class ChatRoomServiceImpl extends ServiceImpl<ChatRoomMapper, ChatRoomDO>
         ChatRoomDO room = new ChatRoomDO();
         room.setName(ao.getName());
         room.setDescription(ao.getDescription());
-        room.setMaxUsers(ao.getMaxUsers());
+        int maxUsers = ao.getMaxUsers() != null ? ao.getMaxUsers()
+                : sysConfigService.getInt(SysConfigKeys.ROOM_DEFAULT_MAX_USERS, SysConfigKeys.DEFAULT_ROOM_MAX_USERS);
+        if (maxUsers < 1) {
+            maxUsers = SysConfigKeys.DEFAULT_ROOM_MAX_USERS;
+        }
+        room.setMaxUsers(maxUsers);
         room.setJoinPolicy(Optional.ofNullable(ao.getJoinPolicy()).orElse(JoinPolicyEnum.OPEN.name()));
         room.setStatus(RoomStatusEnum.ACTIVE.name());
         room.setOwnerId(current.getUserId());

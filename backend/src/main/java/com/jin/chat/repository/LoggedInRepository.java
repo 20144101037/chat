@@ -1,7 +1,7 @@
 package com.jin.chat.repository;
 
 import com.jin.chat.common.constant.RedisKeyConst;
-import com.jin.chat.common.util.JwtUtil;
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -55,6 +55,6 @@ public class LoggedInRepository {
     }
 
     private long ttlMinutes() {
-        return sysConfigService.getInt(JwtUtil.CONFIG_KEY_EXPIRE_MINUTES, JwtUtil.DEFAULT_EXPIRE_MINUTES);
+        return sysConfigService.getInt(SysConfigKeys.JWT_EXPIRE_MINUTES, SysConfigKeys.DEFAULT_JWT_EXPIRE_MINUTES);
     }
 }

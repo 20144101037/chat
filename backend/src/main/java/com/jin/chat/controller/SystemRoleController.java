@@ -6,7 +6,9 @@ import com.jin.chat.domain.ao.IdsAO;
 import com.jin.chat.domain.ao.RoleAO;
 import com.jin.chat.domain.entity.RoleDO;
 import com.jin.chat.domain.query.RoleQuery;
+import com.jin.chat.domain.vo.MenuVO;
 import com.jin.chat.service.MenuPermissionService;
+import com.jin.chat.service.MenuService;
 import com.jin.chat.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class SystemRoleController {
     private static final String MENU_USERS = "/app/system/users";
 
     private final RoleService roleService;
+    private final MenuService menuService;
     private final MenuPermissionService menuPermissionService;
 
     @GetMapping
@@ -42,6 +45,13 @@ public class SystemRoleController {
     public ResultData<List<RoleDO>> all() {
         menuPermissionService.requireAnyMenuPath(MENU_ROLES, MENU_USERS);
         return ResultData.success(roleService.listAll());
+    }
+
+    /** 供角色分配菜单时使用（只读菜单树，不再提供菜单 CRUD 管理页） */
+    @GetMapping("/menu-tree")
+    public ResultData<List<MenuVO>> menuTree() {
+        menuPermissionService.requireMenuPath(MENU_ROLES);
+        return ResultData.success(menuService.listTree());
     }
 
     @PostMapping

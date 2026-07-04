@@ -1,6 +1,7 @@
 package com.jin.chat.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.common.context.LoginUser;
 import com.jin.chat.common.context.UserContextHolder;
 import com.jin.chat.common.exception.BusinessException;
@@ -33,6 +34,8 @@ class ChatRoomServiceTest {
     private ChatRoomMapper chatRoomMapper;
     @Mock
     private UserChatRoomMapper userChatRoomMapper;
+    @Mock
+    private SysConfigService sysConfigService;
 
     @Spy
     @InjectMocks
@@ -49,6 +52,23 @@ class ChatRoomServiceTest {
     @AfterEach
     void tearDown() {
         UserContextHolder.clear();
+    }
+
+    @Test
+    void createRoom_shouldUseConfigDefaultMaxUsers_whenNotProvided() {
+        when(sysConfigService.getInt(SysConfigKeys.ROOM_DEFAULT_MAX_USERS, SysConfigKeys.DEFAULT_ROOM_MAX_USERS))
+                .thenReturn(100);
+        RoomCreateAO ao = new RoomCreateAO();
+        ao.setName("配置房");
+        doAnswer(inv -> {
+            ChatRoomDO room = inv.getArgument(0);
+            room.setId(2L);
+            return true;
+        }).when(chatRoomService).save(any(ChatRoomDO.class));
+        when(userChatRoomMapper.countJoinedMembers(2L)).thenReturn(0L);
+
+        var vo = chatRoomService.createRoom(ao);
+        assertEquals(100, vo.getMaxUsers());
     }
 
     @Test
@@ -101,10 +121,6 @@ class ChatRoomServiceTest {
 
     @Test
     void changeStatus_shouldValidateEnum() {
-        ChatRoomDO room = new ChatRoomDO();
-        room.setId(4L);
-        room.setStatus(RoomStatusEnum.ACTIVE.name());
-        doReturn(room).when(chatRoomService).getById(4L);
         assertThrows(IllegalArgumentException.class, () -> chatRoomService.changeStatus(4L, "INVALID"));
     }
 

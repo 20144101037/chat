@@ -110,7 +110,6 @@ const routeTitles = {
   '/app/configs': '全局配置',
   '/app/system/users': '用户管理',
   '/app/system/roles': '角色管理',
-  '/app/system/menus': '菜单权限管理',
 };
 
 const currentTitle = computed(() => {

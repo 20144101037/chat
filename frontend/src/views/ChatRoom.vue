@@ -48,7 +48,7 @@
         type="textarea"
         :rows="2"
         resize="none"
-        maxlength="2000"
+        :maxlength="messageMaxLength"
         placeholder="输入消息，回车发送（发送后需管理员审核）"
         @keyup.enter.exact.prevent="send"
       />
@@ -63,7 +63,7 @@ import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft, Promotion, InfoFilled } from '@element-plus/icons-vue';
-import { messageApi, roomApi } from '../api';
+import { messageApi, roomApi, configApi } from '../api';
 import { useAuthStore } from '../stores/auth';
 import { useWsStore } from '../stores/ws';
 
@@ -79,6 +79,7 @@ const tip = ref('');
 const listEl = ref(null);
 const hasMore = ref(false);
 const loadingMore = ref(false);
+const messageMaxLength = ref(1000);
 const PAGE_SIZE = 30;
 
 function appendMessage(payload) {
@@ -153,6 +154,12 @@ async function send() {
 }
 
 onMounted(async () => {
+  try {
+    const cfg = await configApi.runtime();
+    messageMaxLength.value = cfg.messageMaxLength;
+  } catch (e) {
+    // 使用默认值
+  }
   await loadRoom();
   await loadHistory();
   await ws.ensureConnected();

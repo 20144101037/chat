@@ -1,5 +1,6 @@
 package com.jin.chat.common.util;
 
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.common.context.LoginUser;
 import com.jin.chat.service.SysConfigService;
 import io.jsonwebtoken.Claims;
@@ -26,11 +27,11 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    /** 令牌有效期配置键 */
-    public static final String CONFIG_KEY_EXPIRE_MINUTES = "jwt.expire-minutes";
+    /** 令牌有效期配置键（与 system_config 表一致） */
+    public static final String CONFIG_KEY_EXPIRE_MINUTES = SysConfigKeys.JWT_EXPIRE_MINUTES;
 
     /** 默认有效期：120 分钟（2 小时） */
-    public static final int DEFAULT_EXPIRE_MINUTES = 120;
+    public static final int DEFAULT_EXPIRE_MINUTES = SysConfigKeys.DEFAULT_JWT_EXPIRE_MINUTES;
 
     @Value("${chat.jwt.secret}")
     private String secret;

@@ -84,10 +84,7 @@ INSERT INTO menus (parent_id, menu_key, name, path, sort, menu_type)
 SELECT t.id, 'system:roles', '角色管理', '/app/system/roles', 2, 'MENU'
 FROM (SELECT id FROM menus WHERE menu_key = 'system') t
     ON DUPLICATE KEY UPDATE menu_key = menu_key;
-INSERT INTO menus (parent_id, menu_key, name, path, sort, menu_type)
-SELECT t.id, 'system:menus', '菜单权限管理', '/app/system/menus', 3, 'MENU'
-FROM (SELECT id FROM menus WHERE menu_key = 'system') t
-    ON DUPLICATE KEY UPDATE menu_key = menu_key;
+
 
 -- 角色-菜单授权
 -- 系统管理员：全部菜单

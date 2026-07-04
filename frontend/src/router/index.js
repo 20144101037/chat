@@ -21,7 +21,6 @@ const routes = [
       { path: 'configs', name: 'SystemConfig', component: () => import('../views/SystemConfig.vue') },
       { path: 'system/users', name: 'UserManage', component: () => import('../views/system/UserManage.vue') },
       { path: 'system/roles', name: 'RoleManage', component: () => import('../views/system/RoleManage.vue') },
-      { path: 'system/menus', name: 'MenuManage', component: () => import('../views/system/MenuManage.vue') },
     ],
   },
 ];

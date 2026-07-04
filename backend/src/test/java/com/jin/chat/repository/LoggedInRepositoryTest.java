@@ -1,7 +1,7 @@
 package com.jin.chat.repository;
 
 import com.jin.chat.common.constant.RedisKeyConst;
-import com.jin.chat.common.util.JwtUtil;
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.service.SysConfigService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,20 +34,25 @@ class LoggedInRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(sysConfigService.getInt(JwtUtil.CONFIG_KEY_EXPIRE_MINUTES, JwtUtil.DEFAULT_EXPIRE_MINUTES))
-                .thenReturn(120);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
         repository = new LoggedInRepository(redisTemplate, sysConfigService);
+    }
+
+    private void stubJwtExpireMinutes() {
+        when(sysConfigService.getInt(SysConfigKeys.JWT_EXPIRE_MINUTES, SysConfigKeys.DEFAULT_JWT_EXPIRE_MINUTES))
+                .thenReturn(120);
     }
 
     @Test
     void markLoggedIn_shouldSetKeyWithJwtTtl() {
+        stubJwtExpireMinutes();
         repository.markLoggedIn(1L);
         verify(valueOps).set(eq(RedisKeyConst.LOGGED_IN_PREFIX + 1L), eq("1"), eq(120L), eq(TimeUnit.MINUTES));
     }
 
     @Test
     void refreshLoggedIn_shouldExpire_whenKeyExists() {
+        stubJwtExpireMinutes();
         when(redisTemplate.hasKey(RedisKeyConst.LOGGED_IN_PREFIX + 2L)).thenReturn(true);
         repository.refreshLoggedIn(2L);
         verify(redisTemplate).expire(RedisKeyConst.LOGGED_IN_PREFIX + 2L, 120L, TimeUnit.MINUTES);
@@ -55,6 +60,7 @@ class LoggedInRepositoryTest {
 
     @Test
     void refreshLoggedIn_shouldMarkLoggedIn_whenKeyMissing() {
+        stubJwtExpireMinutes();
         when(redisTemplate.hasKey(RedisKeyConst.LOGGED_IN_PREFIX + 3L)).thenReturn(false);
         repository.refreshLoggedIn(3L);
         verify(valueOps).set(eq(RedisKeyConst.LOGGED_IN_PREFIX + 3L), eq("1"), eq(120L), eq(TimeUnit.MINUTES));

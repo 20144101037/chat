@@ -5,6 +5,7 @@ import com.jin.chat.common.api.PageResult;
 import com.jin.chat.domain.ao.ConfigUpdateAO;
 import com.jin.chat.domain.entity.SysConfigDO;
 import com.jin.chat.domain.query.ConfigQuery;
+import com.jin.chat.domain.vo.ConfigRuntimeVO;
 
 /**
  * <p>
@@ -31,4 +32,7 @@ public interface SysConfigService extends IService<SysConfigDO> {
      * 读取整型配置，不存在或解析失败时返回默认值。
      */
     int getInt(String key, int defaultValue);
+
+    /** 供前端表单默认值与运行时校验使用的配置快照 */
+    ConfigRuntimeVO getRuntime();
 }

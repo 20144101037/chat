@@ -149,7 +149,17 @@
 | 方法 | 路径 | 请求 | 响应 | 权限 |
 |------|------|------|------|------|
 | GET | `/api/configs` | `keyword?`, `configGroup?`, `pageNo`, `pageSize` | `PageResult<SysConfigDO>` | 菜单 `/app/configs` |
+| GET | `/api/configs/runtime` | — | `ConfigRuntimeVO` | 登录即可 |
 | PUT | `/api/configs/{id}` | `{ configValue }` | `SysConfigDO` | 菜单 `/app/configs` |
+
+**ConfigRuntimeVO**（供创建聊天室、发消息等前端默认值）：
+
+| 字段 | 说明 |
+|------|------|
+| roomDefaultMaxUsers | 新建聊天室默认最大人数（对应 `room.default-max-users`） |
+| messageMaxLength | 单条消息最大字符数（对应 `message.max-length`） |
+
+> 管理端修改 `PUT /api/configs/{id}` 后，后端业务会立即读新值；前端打开「新建聊天室」时会再次请求 `/runtime` 刷新默认值。
 
 ---
 
@@ -192,22 +202,14 @@ Prometheus：`chat.logged-in.users`、`chat.online.users`（同口径）、`chat
 |------|------|------|------|
 | GET | `/api/admin/roles` | 分页 + keyword | 菜单 `/app/system/roles` |
 | GET | `/api/admin/roles/all` | 无 | 角色/用户管理菜单 |
+| GET | `/api/admin/roles/menu-tree` | 无 | 同上（只读菜单树，供分配菜单使用） |
 | POST | `/api/admin/roles` | `RoleAO` | 菜单 `/app/system/roles` |
 | PUT | `/api/admin/roles/{id}` | `RoleAO` | 同上 |
 | DELETE | `/api/admin/roles/{id}` | 无 | 同上（内置角色不可删） |
 | GET | `/api/admin/roles/{id}/menus` | 无 | 同上 |
 | PUT | `/api/admin/roles/{id}/menus` | `{ ids: [] }` 菜单 ID 列表 | 同上 |
 
----
-
-### 2.11 系统管理 — 菜单 `/api/admin/menus`
-
-| 方法 | 路径 | 请求 | 权限 |
-|------|------|------|------|
-| GET | `/api/admin/menus/tree` | 无 | 菜单/角色管理 |
-| POST | `/api/admin/menus` | `MenuAO` | 菜单 `/app/system/menus` |
-| PUT | `/api/admin/menus/{id}` | `MenuAO` | 同上 |
-| DELETE | `/api/admin/menus/{id}` | 无 | 同上 |
+> 系统菜单结构由 Flyway 迁移脚本维护，**不提供**「菜单权限管理」页面及 `/api/admin/menus` CRUD 接口。
 
 ---
 

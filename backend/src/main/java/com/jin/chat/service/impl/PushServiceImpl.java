@@ -1,7 +1,9 @@
 package com.jin.chat.service.impl;
 
+import com.jin.chat.common.constant.SysConfigKeys;
 import com.jin.chat.domain.dto.WsMessage;
 import com.jin.chat.service.PushService;
+import com.jin.chat.service.SysConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -30,10 +32,8 @@ public class PushServiceImpl implements PushService {
     private static final String AUDIT_TOPIC = "/topic/audit";
     private static final String USER_NOTIFY_QUEUE = "/queue/notifications";
 
-    /** 推送失败最大重试次数（at-least-once） */
-    private static final int MAX_RETRY = 2;
-
     private final SimpMessagingTemplate messagingTemplate;
+    private final SysConfigService sysConfigService;
 
     @Async("pushExecutor")
     @Override
@@ -60,6 +60,7 @@ public class PushServiceImpl implements PushService {
      * 带有限次重试的推送，尽量保证送达（at-least-once）。
      */
     private void sendWithRetry(Runnable sendAction, String desc) {
+        int maxRetry = sysConfigService.getInt(SysConfigKeys.PUSH_RETRY_TIMES, SysConfigKeys.DEFAULT_PUSH_RETRY_TIMES);
         int attempt = 0;
         while (true) {
             try {
@@ -67,8 +68,8 @@ public class PushServiceImpl implements PushService {
                 return;
             } catch (Exception e) {
                 attempt++;
-                if (attempt > MAX_RETRY) {
-                    log.error("{} 推送失败，已达最大重试次数 {}", desc, MAX_RETRY, e);
+                if (attempt > maxRetry) {
+                    log.error("{} 推送失败，已达最大重试次数 {}", desc, maxRetry, e);
                     return;
                 }
                 log.warn("{} 推送失败，第 {} 次重试", desc, attempt);

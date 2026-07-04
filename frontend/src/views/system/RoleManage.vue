@@ -146,7 +146,7 @@ async function remove(row) {
 async function openMenus(row) {
   current.value = row;
   if (!menuTree.value.length) {
-    menuTree.value = await adminApi.menuTree();
+    menuTree.value = await adminApi.roleMenuTree();
   }
   const checkedIds = await adminApi.roleMenus(row.id);
   menuDialog.value = true;

@@ -45,6 +45,7 @@ public enum ErrorCodeEnum {
 
     MESSAGE_NOT_EXIST(4000, "消息不存在"),
     MESSAGE_ALREADY_REVIEWED(4001, "消息已被审核，请勿重复操作"),
+    MESSAGE_CONTENT_TOO_LONG(4003, "消息内容超过长度限制"),
     AUDIT_CONCURRENT_CONFLICT(4002, "审核状态并发冲突，请重试"),
 
     CONFIG_KEY_EXIST(5000, "配置键已存在"),

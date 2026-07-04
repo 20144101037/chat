@@ -25,11 +25,7 @@ export const adminApi = {
   roleDelete: (id) => request.delete(`/admin/roles/${id}`),
   roleMenus: (id) => request.get(`/admin/roles/${id}/menus`),
   assignRoleMenus: (id, ids) => request.put(`/admin/roles/${id}/menus`, { ids }),
-  // 菜单管理
-  menuTree: () => request.get('/admin/menus/tree'),
-  menuCreate: (data) => request.post('/admin/menus', data),
-  menuUpdate: (id, data) => request.put(`/admin/menus/${id}`, data),
-  menuDelete: (id) => request.delete(`/admin/menus/${id}`),
+  roleMenuTree: () => request.get('/admin/roles/menu-tree'),
 };
 
 export const roomApi = {
@@ -67,6 +63,7 @@ export const auditApi = {
 export const configApi = {
   page: (params) => request.get('/configs', { params }),
   update: (id, data) => request.put(`/configs/${id}`, data),
+  runtime: () => request.get('/configs/runtime'),
 };
 
 export const metricsApi = {

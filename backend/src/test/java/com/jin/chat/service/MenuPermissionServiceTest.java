@@ -71,7 +71,7 @@ class MenuPermissionServiceTest {
         when(menuService.listByUser(4L)).thenReturn(List.of());
 
         assertThrows(BusinessException.class,
-                () -> menuPermissionService.requireAnyMenuPath("/app/system/roles", "/app/system/menus"));
+                () -> menuPermissionService.requireAnyMenuPath("/app/system/roles", "/app/system/users"));
     }
 
     private static MenuVO menu(String path, String key) {

@@ -24,7 +24,7 @@ public class RoomCreateAO {
 
     @Min(value = 1, message = "最大用户数至少为 1")
     @Max(value = 100000, message = "最大用户数不能超过 100000")
-    private Integer maxUsers = 500;
+    private Integer maxUsers;
 
     /** OPEN / APPROVAL */
     @Pattern(regexp = "OPEN|APPROVAL", message = "加入策略仅支持 OPEN 或 APPROVAL")

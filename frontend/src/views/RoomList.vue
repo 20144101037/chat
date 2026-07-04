@@ -169,7 +169,7 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Plus, User } from '@element-plus/icons-vue';
-import { roomApi } from '../api';
+import { roomApi, configApi } from '../api';
 import { useAuthStore } from '../stores/auth';
 import PageHeader from '../components/PageHeader.vue';
 
@@ -181,7 +181,8 @@ const page = reactive({ records: [], total: 0 });
 
 const dialog = ref(false);
 const editingId = ref(null);
-const form = reactive({ name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN', status: 'ACTIVE' });
+const form = reactive({ name: '', description: '', maxUsers: null, joinPolicy: 'OPEN', status: 'ACTIVE' });
+const runtimeConfig = reactive({ roomDefaultMaxUsers: 500, messageMaxLength: 1000 });
 
 const manageDialog = ref(false);
 const memberLoading = ref(false);
@@ -244,9 +245,21 @@ function enter(row) {
   router.push(`/app/rooms/${row.id}`);
 }
 
-function openCreate() {
+async function openCreate() {
   editingId.value = null;
-  Object.assign(form, { name: '', description: '', maxUsers: 500, joinPolicy: 'OPEN', status: 'ACTIVE' });
+  try {
+    const cfg = await configApi.runtime();
+    runtimeConfig.roomDefaultMaxUsers = cfg.roomDefaultMaxUsers;
+  } catch (e) {
+    // 使用已缓存的默认值
+  }
+  Object.assign(form, {
+    name: '',
+    description: '',
+    maxUsers: runtimeConfig.roomDefaultMaxUsers,
+    joinPolicy: 'OPEN',
+    status: 'ACTIVE',
+  });
   dialog.value = true;
 }
 
@@ -358,7 +371,16 @@ async function sendNotify() {
   notifyDialog.value = false;
 }
 
-onMounted(load);
+onMounted(async () => {
+  try {
+    const cfg = await configApi.runtime();
+    runtimeConfig.roomDefaultMaxUsers = cfg.roomDefaultMaxUsers;
+    runtimeConfig.messageMaxLength = cfg.messageMaxLength;
+  } catch (e) {
+    // 使用本地兜底默认值
+  }
+  load();
+});
 </script>
 
 <style scoped>
